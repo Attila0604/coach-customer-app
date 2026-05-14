@@ -1,4 +1,55 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
 export default function LoginPage() {
+  const [username, setUsername] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    console.log("🔵 handleSubmit FIRED, username:", username);
+    setError(null);
+
+    if (!username.trim()) {
+      console.log("🟡 username empty, abort");
+      setError("Bitte Username eingeben");
+      return;
+    }
+
+    setLoading(true);
+    console.log("🔵 fetching /api/auth/request-code...");
+
+    try {
+      const res = await fetch("/api/auth/request-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username.trim() }),
+      });
+
+      console.log("🟢 response received, status:", res.status, "ok:", res.ok);
+      const data = await res.json();
+      console.log("🟢 response data:", data);
+
+      if (!res.ok) {
+        console.log("🔴 not ok");
+        setError(data.error || "Fehler beim Senden");
+        setLoading(false);
+        return;
+      }
+
+      console.log("✅ success, redirecting");
+      router.push(`/login/verify?u=${encodeURIComponent(data.username)}`);
+    } catch (err) {
+      console.error("🔴 fetch threw:", err);
+      setError("Netzwerk-Fehler");
+      setLoading(false);
+    }
+  }
+
   return (
     <main className="min-h-screen flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-sm">
@@ -18,7 +69,7 @@ export default function LoginPage() {
           Melde dich mit deinem Telegram-Konto an, um deinen persönlichen Bereich zu öffnen.
         </p>
 
-        <form className="space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-3">
           <div className="flex items-center gap-2 px-3.5 py-3 bg-white/[0.04] border border-white/[0.1] rounded-md focus-within:border-gold/40 transition-colors">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -35,17 +86,29 @@ export default function LoginPage() {
               <path d="M22 2l-7 20-4-9-9-4 20-7z" />
             </svg>
             <input
+              id="telegram-username"
+              name="username"
               type="text"
               placeholder="@dein_username"
-              className="flex-1 bg-transparent text-sm text-bone placeholder:text-bone-faint outline-none"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              disabled={loading}
+              className="flex-1 bg-transparent text-sm text-bone placeholder:text-bone-faint outline-none disabled:opacity-50"
+              autoComplete="off"
+              spellCheck={false}
             />
           </div>
 
+          {error && (
+            <p className="text-[12px] text-red-400/80 px-1">{error}</p>
+          )}
+
           <button
             type="submit"
-            className="w-full py-3 bg-gold text-ink-900 text-sm font-medium rounded-md hover:bg-gold-soft transition-colors"
+            disabled={loading}
+            className="w-full py-3 bg-gold text-ink-900 text-sm font-medium rounded-md hover:bg-gold-soft transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Code anfordern
+            {loading ? "Sende Code…" : "Code anfordern"}
           </button>
         </form>
 
