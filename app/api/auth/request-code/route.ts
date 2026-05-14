@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(request: Request) {
+console.log("[DEBUG] URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
+  console.log("[DEBUG] KEY prefix:", process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 15));
+  console.log("[DEBUG] KEY length:", process.env.SUPABASE_SERVICE_ROLE_KEY?.length);
+  console.log("[DEBUG] BOT_TOKEN prefix:", process.env.TELEGRAM_BOT_TOKEN?.substring(0, 12));  
   try {
     const { username } = await request.json();
 
