@@ -1,97 +1,129 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export async function POST(request: Request) {
-console.log("[DEBUG] URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
-  console.log("[DEBUG] KEY prefix:", process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 15));
-  console.log("[DEBUG] KEY length:", process.env.SUPABASE_SERVICE_ROLE_KEY?.length);
-  console.log("[DEBUG] BOT_TOKEN prefix:", process.env.TELEGRAM_BOT_TOKEN?.substring(0, 12));  
+type CookieToSet = { name: string; value: string; options?: CookieOptions };
+
+export async function POST(request: NextRequest) {
   try {
-    const { username } = await request.json();
+    const { username, code } = await request.json();
 
-    if (!username || typeof username !== "string") {
+    if (!username || !code) {
       return NextResponse.json(
-        { error: "Username erforderlich" },
+        { error: "Username und Code erforderlich" },
         { status: 400 }
       );
     }
 
-    // Username normalisieren: @ entfernen, lowercase, trim
     const normalized = username.replace(/^@/, "").toLowerCase().trim();
-    if (!normalized) {
-      return NextResponse.json(
-        { error: "Username erforderlich" },
-        { status: 400 }
-      );
-    }
+    const admin = createAdminClient();
 
-    const supabase = createAdminClient();
-
-    // Kunde case-insensitiv per Username finden
-    const { data: customer, error: customerError } = await supabase
+    const { data: customer, error: customerError } = await admin
       .from("customers")
-      .select("id, telegram_chat_id, telegram_username, first_name")
+      .select("id, telegram_chat_id, telegram_username, first_name, user_id")
       .ilike("telegram_username", normalized)
       .maybeSingle();
 
-    if (customerError) {
-      console.error("Customer lookup error:", customerError);
-      return NextResponse.json({ error: "Server-Fehler" }, { status: 500 });
+    if (customerError || !customer) {
+      return NextResponse.json({ error: "Ungültig" }, { status: 401 });
     }
-    if (!customer) {
+
+    const { data: magicCode } = await admin
+      .from("magic_codes")
+      .select("id")
+      .eq("customer_id", customer.id)
+      .eq("code", String(code).trim())
+      .is("used_at", null)
+      .gt("expires_at", new Date().toISOString())
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!magicCode) {
       return NextResponse.json(
-        { error: "Kein Account gefunden. Schreib zuerst dem Bot." },
-        { status: 404 }
+        { error: "Code ungültig oder abgelaufen" },
+        { status: 401 }
       );
     }
 
-    // 6-stelligen Code generieren
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 Min
+    await admin
+      .from("magic_codes")
+      .update({ used_at: new Date().toISOString() })
+      .eq("id", magicCode.id);
 
-    const { error: insertError } = await supabase.from("magic_codes").insert({
-      customer_id: customer.id,
-      code,
-      expires_at: expiresAt,
-    });
+    const syntheticEmail = `tg-${customer.telegram_chat_id}@coach.local`;
 
-    if (insertError) {
-      console.error("Insert magic_code failed:", insertError);
+    if (!customer.user_id) {
+      const { data: created, error: createError } =
+        await admin.auth.admin.createUser({
+          email: syntheticEmail,
+          email_confirm: true,
+          user_metadata: {
+            customer_id: customer.id,
+            telegram_username: customer.telegram_username,
+            first_name: customer.first_name,
+          },
+        });
+
+      if (createError || !created.user) {
+        console.error("Create user failed:", createError);
+        return NextResponse.json({ error: "Server-Fehler" }, { status: 500 });
+      }
+
+      await admin
+        .from("customers")
+        .update({ user_id: created.user.id })
+        .eq("id", customer.id);
+    }
+
+    const { data: linkData, error: linkError } =
+      await admin.auth.admin.generateLink({
+        type: "magiclink",
+        email: syntheticEmail,
+      });
+
+    if (linkError || !linkData.properties?.hashed_token) {
+      console.error("Generate link failed:", linkError);
       return NextResponse.json({ error: "Server-Fehler" }, { status: 500 });
     }
 
-    // Via Telegram Bot API senden
-    const telegramToken = process.env.TELEGRAM_BOT_TOKEN!;
-    const message = `🔐 Dein Login-Code: <b>${code}</b>\n\nGültig für 5 Minuten.`;
+    // Response upfront erstellen — Cookies hängen wir HIER dran
+    const response = NextResponse.json({ ok: true });
 
-    const tgResponse = await fetch(
-      `https://api.telegram.org/bot${telegramToken}/sendMessage`,
+    // Supabase-Client der Cookies direkt an unsere response setzt
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: customer.telegram_chat_id,
-          text: message,
-          parse_mode: "HTML",
-        }),
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(cookiesToSet: CookieToSet[]) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              response.cookies.set(name, value, options)
+            );
+          },
+        },
       }
     );
 
-    if (!tgResponse.ok) {
-      const errText = await tgResponse.text();
-      console.error("Telegram send failed:", errText);
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      token_hash: linkData.properties.hashed_token,
+      type: "magiclink",
+    });
+
+    if (verifyError) {
+      console.error("Verify OTP failed:", verifyError);
       return NextResponse.json(
-        { error: "Code konnte nicht gesendet werden" },
+        { error: "Login fehlgeschlagen" },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({
-      ok: true,
-      username: customer.telegram_username,
-    });
+    return response;
   } catch (error) {
-    console.error("request-code error:", error);
+    console.error("verify-code error:", error);
     return NextResponse.json({ error: "Server-Fehler" }, { status: 500 });
   }
 }
