@@ -44,7 +44,7 @@ function VerifyForm() {
         return;
       }
 
-      router.push("/me");
+      window.location.href = "/me";
     } catch {
       setError("Netzwerk-Fehler");
       setLoading(false);
