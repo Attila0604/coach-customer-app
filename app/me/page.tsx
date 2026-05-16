@@ -1,4 +1,31 @@
-export default function MePage() {
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+const SESSION_COOKIE = "coach_customer_id";
+
+export default async function MePage() {
+  const cookieStore = cookies();
+  const customerId = cookieStore.get(SESSION_COOKIE)?.value;
+
+  if (!customerId) {
+    redirect("/");
+  }
+
+  const admin = createAdminClient();
+  const { data: customer } = await admin
+    .from("customers")
+    .select("first_name, telegram_username")
+    .eq("id", customerId)
+    .maybeSingle();
+
+  if (!customer) {
+    redirect("/");
+  }
+
+  const firstName = customer.first_name || "Member";
+  const telegramUsername = customer.telegram_username || "";
+
   return (
     <main className="min-h-screen flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-sm">
@@ -11,11 +38,12 @@ export default function MePage() {
         </p>
 
         <h1 className="font-serif text-4xl text-bone leading-tight mb-3 font-normal">
-          Willkommen.
+          Hallo, {firstName}.
         </h1>
 
         <p className="text-sm text-bone-muted leading-relaxed mb-8">
-          Du bist erfolgreich eingeloggt.
+          Du bist eingeloggt als{" "}
+          <span className="text-bone">@{telegramUsername}</span>.
         </p>
 
         <p className="text-[11px] text-bone-faint">
