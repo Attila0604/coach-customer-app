@@ -1,26 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { redirect } from "next/navigation";
-
-export default async function MePage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/");
-  }
-
-  const admin = createAdminClient();
-  const { data: customer } = await admin
-    .from("customers")
-    .select("first_name, telegram_username")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  const firstName = customer?.first_name || "Member";
-
+export default function MePage() {
   return (
     <main className="min-h-screen flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-sm">
@@ -33,16 +11,15 @@ export default async function MePage() {
         </p>
 
         <h1 className="font-serif text-4xl text-bone leading-tight mb-3 font-normal">
-          Hallo, {firstName}.
+          Willkommen.
         </h1>
 
         <p className="text-sm text-bone-muted leading-relaxed mb-8">
-          Du bist eingeloggt als{" "}
-          <span className="text-bone">@{customer?.telegram_username}</span>.
+          Du bist erfolgreich eingeloggt.
         </p>
 
         <p className="text-[11px] text-bone-faint">
-          Deine Member-Area kommt in Phase 4. Das hier ist der Login-Test.
+          Deine Member-Area kommt in Phase 4.
         </p>
       </div>
     </main>
