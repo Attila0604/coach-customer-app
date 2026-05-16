@@ -1,49 +1,23 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-type CookieToSet = { name: string; value: string; options?: CookieOptions };
+const SESSION_COOKIE = "coach_customer_id";
 
-export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request });
+export function middleware(request: NextRequest) {
+  if (!request.nextUrl.pathname.startsWith("/me")) {
+    return NextResponse.next();
+  }
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet: CookieToSet[]) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
-          response = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
+  const customerId = request.cookies.get(SESSION_COOKIE)?.value;
 
-  // Wichtig: refresht die Session bei jedem Request
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // Schütze /me/* Routen — bei kein User: zurück zur Login-Seite
-  if (request.nextUrl.pathname.startsWith("/me") && !user) {
+  if (!customerId) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);
   }
 
-  return response;
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
-  ],
+  matcher: ["/me/:path*"],
 };
