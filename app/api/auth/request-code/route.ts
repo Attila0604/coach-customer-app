@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { createAdminClient } from "@/lib/supabase/admin";
-
-type CookieToSet = { name: string; value: string; options?: CookieOptions };
 
 export async function POST(request: NextRequest) {
   try {
-    const { username, code } = await request.json();
+    const { username } = await request.json();
 
-    if (!username || !code) {
+    if (!username) {
       return NextResponse.json(
-        { error: "Username und Code erforderlich" },
+        { error: "Username erforderlich" },
         { status: 400 }
       );
     }
@@ -18,112 +15,85 @@ export async function POST(request: NextRequest) {
     const normalized = username.replace(/^@/, "").toLowerCase().trim();
     const admin = createAdminClient();
 
+    // Customer per Telegram-Username finden
     const { data: customer, error: customerError } = await admin
       .from("customers")
-      .select("id, telegram_chat_id, telegram_username, first_name, user_id")
+      .select("id, telegram_chat_id, telegram_username")
       .ilike("telegram_username", normalized)
       .maybeSingle();
 
     if (customerError || !customer) {
-      return NextResponse.json({ error: "Ungültig" }, { status: 401 });
-    }
-
-    const { data: magicCode } = await admin
-      .from("magic_codes")
-      .select("id")
-      .eq("customer_id", customer.id)
-      .eq("code", String(code).trim())
-      .is("used_at", null)
-      .gt("expires_at", new Date().toISOString())
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (!magicCode) {
       return NextResponse.json(
-        { error: "Code ungültig oder abgelaufen" },
+        { error: "Username nicht gefunden. Schreib zuerst dem Bot." },
         { status: 401 }
       );
     }
 
-    await admin
-      .from("magic_codes")
-      .update({ used_at: new Date().toISOString() })
-      .eq("id", magicCode.id);
-
-    const syntheticEmail = `tg-${customer.telegram_chat_id}@coach.local`;
-
-    if (!customer.user_id) {
-      const { data: created, error: createError } =
-        await admin.auth.admin.createUser({
-          email: syntheticEmail,
-          email_confirm: true,
-          user_metadata: {
-            customer_id: customer.id,
-            telegram_username: customer.telegram_username,
-            first_name: customer.first_name,
-          },
-        });
-
-      if (createError || !created.user) {
-        console.error("Create user failed:", createError);
-        return NextResponse.json({ error: "Server-Fehler" }, { status: 500 });
-      }
-
-      await admin
-        .from("customers")
-        .update({ user_id: created.user.id })
-        .eq("id", customer.id);
+    if (!customer.telegram_chat_id) {
+      return NextResponse.json(
+        { error: "Telegram-Chat fehlt. Schreib zuerst dem Bot." },
+        { status: 400 }
+      );
     }
 
-    const { data: linkData, error: linkError } =
-      await admin.auth.admin.generateLink({
-        type: "magiclink",
-        email: syntheticEmail,
+    // 6-stelligen Code generieren
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Gültig für 5 Minuten
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
+    // Code in magic_codes speichern
+    const { error: insertError } = await admin
+      .from("magic_codes")
+      .insert({
+        customer_id: customer.id,
+        code,
+        expires_at: expiresAt,
       });
 
-    if (linkError || !linkData.properties?.hashed_token) {
-      console.error("Generate link failed:", linkError);
+    if (insertError) {
+      console.error("Insert magic_code failed:", insertError);
       return NextResponse.json({ error: "Server-Fehler" }, { status: 500 });
     }
 
-    // Response upfront erstellen — Cookies hängen wir HIER dran
-    const response = NextResponse.json({ ok: true });
-
-    // Supabase-Client der Cookies direkt an unsere response setzt
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return request.cookies.getAll();
-          },
-          setAll(cookiesToSet: CookieToSet[]) {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              response.cookies.set(name, value, options)
-            );
-          },
-        },
-      }
-    );
-
-    const { error: verifyError } = await supabase.auth.verifyOtp({
-      token_hash: linkData.properties.hashed_token,
-      type: "magiclink",
-    });
-
-    if (verifyError) {
-      console.error("Verify OTP failed:", verifyError);
+    // Code via Telegram senden
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    if (!botToken) {
+      console.error("TELEGRAM_BOT_TOKEN missing");
       return NextResponse.json(
-        { error: "Login fehlgeschlagen" },
+        { error: "Server-Konfiguration unvollständig" },
         { status: 500 }
       );
     }
 
-    return response;
+    const tgRes = await fetch(
+      `https://api.telegram.org/bot${botToken}/sendMessage`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: customer.telegram_chat_id,
+          text: `🔐 Dein Login-Code: *${code}*\n\nGültig für 5 Minuten.`,
+          parse_mode: "Markdown",
+        }),
+      }
+    );
+
+    if (!tgRes.ok) {
+      const tgError = await tgRes.text();
+      console.error("Telegram send failed:", tgError);
+      return NextResponse.json(
+        { error: "Code konnte nicht via Telegram zugestellt werden" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      username: customer.telegram_username,
+    });
   } catch (error) {
-    console.error("verify-code error:", error);
+    console.error("request-code error:", error);
     return NextResponse.json({ error: "Server-Fehler" }, { status: 500 });
   }
 }
