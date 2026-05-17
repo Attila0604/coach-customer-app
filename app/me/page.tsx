@@ -4,6 +4,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const SESSION_COOKIE = "coach_customer_id";
 const DEFAULT_KCAL_GOAL = 2000;
+const DEFAULT_PROTEIN_G = 150;
+const DEFAULT_CARBS_G = 200;
+const DEFAULT_FAT_G = 65;
 
 const MEAL_TYPE_DE: Record<string, string> = {
   breakfast: "Frühstück",
@@ -18,12 +21,32 @@ const MEAL_TYPE_DE: Record<string, string> = {
   snack: "Snack",
 };
 
+const COACH_TIPPS = [
+  "Trink heute deine 2 L Wasser — schon vor dem Frühstück.",
+  "Eiweiß zu jeder Mahlzeit — dein Körper dankt's dir.",
+  "10 Minuten Bewegung sind besser als 0. Auch heute.",
+  "Smartphone weg beim Essen. Spür wie's schmeckt.",
+  "Schlaf ist genauso wichtig wie Training. Heute vor 23 Uhr ins Bett?",
+  "Konsistenz schlägt Perfektion. Einfach weiter loggen.",
+  "Lob dich heute. Dranbleiben ist die halbe Miete.",
+  "Plan deine Mahlzeiten — morgen schon vorbereiten.",
+];
+
 function greetingDe(date: Date): string {
   const hour = date.getHours();
   if (hour >= 5 && hour < 11) return "Guten Morgen";
   if (hour >= 11 && hour < 17) return "Hallo";
   if (hour >= 17 && hour < 22) return "Guten Abend";
   return "Servus";
+}
+
+function motivationalSubtitleDe(date: Date): string {
+  const hour = date.getHours();
+  if (hour >= 5 && hour < 11) return "Bereit für einen starken Tag?";
+  if (hour >= 11 && hour < 14) return "Halbzeit — bleib dran.";
+  if (hour >= 14 && hour < 18) return "Du machst das gut. Weiter so.";
+  if (hour >= 18 && hour < 22) return "Schöner Abend.";
+  return "Ruhe dich gut aus.";
 }
 
 function timeAgoDe(iso: string): string {
@@ -52,7 +75,10 @@ function formatDateDe(date: Date): string {
   });
 }
 
-function formatMealLabel(meal_type: string | null, raw_description: string | null): string {
+function formatMealLabel(
+  meal_type: string | null,
+  raw_description: string | null
+): string {
   const desc = raw_description || "Mahlzeit";
   if (!meal_type) return desc;
   const typeKey = meal_type.toLowerCase();
@@ -66,17 +92,23 @@ function dateKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function startOfWeekMonday(date: Date): Date {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const dow = d.getDay();
+  const diff = dow === 0 ? -6 : 1 - dow;
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+
 function calculateStreak(loggedDates: Set<string>): number {
   if (loggedDates.size === 0) return 0;
-
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-
   const checkDate = new Date(today);
   if (!loggedDates.has(dateKey(checkDate))) {
     checkDate.setDate(checkDate.getDate() - 1);
   }
-
   let streak = 0;
   while (loggedDates.has(dateKey(checkDate))) {
     streak++;
@@ -85,10 +117,58 @@ function calculateStreak(loggedDates: Set<string>): number {
   return streak;
 }
 
+type WeekDay = {
+  label: string;
+  kcal: number;
+  percent: number;
+  isToday: boolean;
+  isFuture: boolean;
+};
+
+function buildWeekData(
+  today: Date,
+  dailyKcals: Map<string, number>
+): WeekDay[] {
+  const labels = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+  const weekStart = startOfWeekMonday(today);
+  const todayKey = dateKey(today);
+  const todayMidnight = new Date(today);
+  todayMidnight.setHours(23, 59, 59, 999);
+  const result: WeekDay[] = [];
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    const key = dateKey(d);
+    const kcal = dailyKcals.get(key) || 0;
+    const isToday = key === todayKey;
+    const isFuture = d > todayMidnight;
+    const percent = isFuture
+      ? 0
+      : Math.min(100, (kcal / DEFAULT_KCAL_GOAL) * 100);
+    result.push({ label: labels[i], kcal, percent, isToday, isFuture });
+  }
+  return result;
+}
+
+function pickDailyTip(date: Date): string {
+  const dayOfYear = Math.floor(
+    (date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) /
+      86400000
+  );
+  return COACH_TIPPS[dayOfYear % COACH_TIPPS.length];
+}
+
+type MacroRow = {
+  label: string;
+  value: number;
+  target: number;
+  unit: string;
+};
+
 export default async function MePage() {
   const cookieStore = cookies();
   const customerId = cookieStore.get(SESSION_COOKIE)?.value;
-
   if (!customerId) redirect("/");
 
   const admin = createAdminClient();
@@ -107,11 +187,9 @@ export default async function MePage() {
   const now = new Date();
   const startOfDay = new Date(now);
   startOfDay.setHours(0, 0, 0, 0);
-
   const sixtyDaysAgo = new Date(now);
   sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
-  // Letzter Check-in mit Details
   const { data: lastCheckin } = await admin
     .from("checkins")
     .select("created_at, weight_kg, mood_rating")
@@ -120,7 +198,6 @@ export default async function MePage() {
     .limit(1)
     .maybeSingle();
 
-  // Heutige Food-Logs (Macros)
   const { data: todayLogs } = await admin
     .from("food_logs")
     .select("total_kcal, protein_g, carbs_g, fat_g")
@@ -137,19 +214,26 @@ export default async function MePage() {
     { kcal: 0, protein: 0, carbs: 0, fat: 0 }
   );
 
-  // Streak (60 Tage Lookback)
-  const { data: streakLogs } = await admin
+  const { data: lookbackLogs } = await admin
     .from("food_logs")
-    .select("logged_at")
+    .select("logged_at, total_kcal")
     .eq("customer_id", customerId)
     .gte("logged_at", sixtyDaysAgo.toISOString());
 
-  const loggedDates = new Set(
-    (streakLogs || []).map((log) => dateKey(new Date(log.logged_at)))
-  );
-  const streak = calculateStreak(loggedDates);
+  const loggedDates = new Set<string>();
+  const dailyKcals = new Map<string, number>();
+  (lookbackLogs || []).forEach((log) => {
+    const key = dateKey(new Date(log.logged_at));
+    loggedDates.add(key);
+    dailyKcals.set(
+      key,
+      (dailyKcals.get(key) || 0) + (Number(log.total_kcal) || 0)
+    );
+  });
 
-  // Letzte 5 Mahlzeiten
+  const streak = calculateStreak(loggedDates);
+  const weekData = buildWeekData(now, dailyKcals);
+
   const { data: recentLogs } = await admin
     .from("food_logs")
     .select("id, meal_type, raw_description, total_kcal, logged_at")
@@ -158,7 +242,15 @@ export default async function MePage() {
     .limit(5);
 
   const logs = recentLogs || [];
-  const kcalProgress = Math.min(100, (todayTotals.kcal / DEFAULT_KCAL_GOAL) * 100);
+
+  const macros: MacroRow[] = [
+    { label: "Kalorien", value: todayTotals.kcal, target: DEFAULT_KCAL_GOAL, unit: "kcal" },
+    { label: "Protein", value: todayTotals.protein, target: DEFAULT_PROTEIN_G, unit: "g" },
+    { label: "Carbs", value: todayTotals.carbs, target: DEFAULT_CARBS_G, unit: "g" },
+    { label: "Fat", value: todayTotals.fat, target: DEFAULT_FAT_G, unit: "g" },
+  ];
+
+  const dailyTip = pickDailyTip(now);
 
   return (
     <main className="min-h-screen px-6 py-12 max-w-md mx-auto">
@@ -166,6 +258,7 @@ export default async function MePage() {
         <p className="font-serif text-base text-gold tracking-wide">Coach</p>
       </header>
 
+      {/* Hero */}
       <section className="mb-10">
         <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-3">
           Eingeloggt
@@ -173,7 +266,7 @@ export default async function MePage() {
         <h1 className="font-serif text-4xl text-bone leading-tight mb-3 font-normal">
           {greetingDe(now)}, {firstName}.
         </h1>
-        <p className="text-sm text-bone-muted leading-relaxed">
+        <p className="text-sm text-bone-muted leading-relaxed mb-3">
           {formatDateDe(now)}
           {streak > 0 && (
             <>
@@ -184,8 +277,51 @@ export default async function MePage() {
             </>
           )}
         </p>
+        <p className="text-sm text-bone-faint italic leading-relaxed">
+          {motivationalSubtitleDe(now)}
+        </p>
       </section>
 
+      {/* Diese Woche */}
+      <section className="mb-10 border-t border-white/[0.08] pt-8">
+        <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-5">
+          Diese Woche
+        </p>
+        <div className="flex items-end justify-between gap-2 h-20">
+          {weekData.map((day, idx) => (
+            <div
+              key={idx}
+              className="flex-1 flex flex-col items-center gap-2 h-full"
+            >
+              <div className="w-full flex-1 flex items-end">
+                <div
+                  className={`w-full rounded-sm transition-all ${
+                    day.isFuture
+                      ? "bg-white/[0.04]"
+                      : day.percent > 0
+                      ? day.isToday
+                        ? "bg-gold"
+                        : "bg-gold/60"
+                      : "bg-white/[0.06]"
+                  }`}
+                  style={{
+                    height: `${Math.max(4, day.percent)}%`,
+                  }}
+                />
+              </div>
+              <span
+                className={`text-[10px] uppercase tracking-wider ${
+                  day.isToday ? "text-gold font-medium" : "text-bone-faint"
+                }`}
+              >
+                {day.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Heute */}
       <section className="mb-10 border-t border-white/[0.08] pt-8">
         <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-5">
           Heute
@@ -218,38 +354,50 @@ export default async function MePage() {
             </span>
           </div>
 
-          <div>
-            <div className="flex justify-between items-baseline mb-2">
-              <span className="text-sm text-bone-muted">Kalorien</span>
-              <span className="text-sm text-bone font-medium tabular-nums">
-                {todayTotals.kcal.toLocaleString("de-DE")}
-                <span className="text-bone-faint">
-                  {" / "}
-                  {DEFAULT_KCAL_GOAL.toLocaleString("de-DE")} kcal
-                </span>
-              </span>
-            </div>
-            <div className="h-1 bg-white/[0.06] rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gold transition-all"
-                style={{ width: `${kcalProgress}%` }}
-              />
-            </div>
+          <div className="space-y-3 pt-2">
+            {macros.map((m) => {
+              const pct = Math.min(100, (m.value / m.target) * 100);
+              return (
+                <div key={m.label}>
+                  <div className="flex justify-between items-baseline mb-1.5">
+                    <span className="text-sm text-bone-muted">{m.label}</span>
+                    <span className="text-sm text-bone font-medium tabular-nums">
+                      {Math.round(m.value).toLocaleString("de-DE")}
+                      <span className="text-bone-faint">
+                        {" / "}
+                        {m.target.toLocaleString("de-DE")} {m.unit}
+                      </span>
+                    </span>
+                  </div>
+                  <div className="h-1 bg-white/[0.06] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gold transition-all"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
-
-          {todayTotals.kcal > 0 && (
-            <div className="flex justify-between items-baseline">
-              <span className="text-sm text-bone-muted">Makros</span>
-              <span className="text-sm text-bone font-medium tabular-nums">
-                {Math.round(todayTotals.protein)}P ·{" "}
-                {Math.round(todayTotals.carbs)}C ·{" "}
-                {Math.round(todayTotals.fat)}F
-              </span>
-            </div>
-          )}
         </div>
       </section>
 
+      {/* Coach's Tipp */}
+      <section className="mb-10 border-t border-white/[0.08] pt-8">
+        <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-4">
+          Coach&apos;s Tipp
+        </p>
+        <blockquote className="border-l-2 border-gold/40 pl-4">
+          <p className="font-serif text-base text-bone italic leading-relaxed mb-2">
+            &ldquo;{dailyTip}&rdquo;
+          </p>
+          <p className="text-[11px] uppercase tracking-caps text-bone-faint">
+            — György
+          </p>
+        </blockquote>
+      </section>
+
+      {/* Aktivität */}
       <section className="mb-12 border-t border-white/[0.08] pt-8">
         <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-5">
           Aktivität
