@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const SESSION_COOKIE = "coach_customer_id";
@@ -205,7 +206,6 @@ export default async function MePage() {
   const sixtyDaysAgo = new Date(now);
   sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
-  // 🆕 Coach-Notiz laden: erst persönlich, sonst global, sonst Fallback
   let coachNote: string | null = null;
 
   const { data: personalNote } = await admin
@@ -423,6 +423,22 @@ export default async function MePage() {
             })}
           </div>
         </div>
+      </section>
+
+      <section className="mb-10 border-t border-white/[0.08] pt-8">
+        <Link href="/me/training" className="block group">
+          <div className="flex justify-between items-baseline">
+            <p className="text-[11px] uppercase tracking-caps text-gold font-medium">
+              Trainingsplan
+            </p>
+            <span className="text-gold text-sm group-hover:translate-x-1 transition-transform inline-block">
+              →
+            </span>
+          </div>
+          <p className="text-sm text-bone-muted mt-2">
+            Übersicht & heutiges Workout
+          </p>
+        </Link>
       </section>
 
       <section className="mb-10 border-t border-white/[0.08] pt-8">
