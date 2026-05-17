@@ -4,7 +4,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const SESSION_COOKIE = "coach_customer_id";
 
-// Fallback-Defaults falls kein customer_profiles-Eintrag existiert
 const DEFAULT_KCAL_GOAL = 2000;
 const DEFAULT_PROTEIN_G = 150;
 const DEFAULT_CARBS_G = 200;
@@ -23,7 +22,7 @@ const MEAL_TYPE_DE: Record<string, string> = {
   snack: "Snack",
 };
 
-const COACH_TIPPS = [
+const FALLBACK_TIPPS = [
   "Trink heute deine 2 L Wasser — schon vor dem Frühstück.",
   "Eiweiß zu jeder Mahlzeit — dein Körper dankt's dir.",
   "10 Minuten Bewegung sind besser als 0. Auch heute.",
@@ -152,12 +151,11 @@ function buildWeekData(
   return result;
 }
 
-function pickDailyTip(date: Date): string {
+function pickFallbackTip(date: Date): string {
   const dayOfYear = Math.floor(
-    (date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) /
-      86400000
+    (date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 86400000
   );
-  return COACH_TIPPS[dayOfYear % COACH_TIPPS.length];
+  return FALLBACK_TIPPS[dayOfYear % FALLBACK_TIPPS.length];
 }
 
 type MacroRow = {
@@ -176,7 +174,7 @@ export default async function MePage() {
 
   const { data: customer } = await admin
     .from("customers")
-    .select("first_name, telegram_username")
+    .select("first_name, telegram_username, coach_id")
     .eq("id", customerId)
     .maybeSingle();
 
@@ -184,8 +182,8 @@ export default async function MePage() {
 
   const firstName = customer.first_name || "Member";
   const telegramUsername = customer.telegram_username || "";
+  const coachId = customer.coach_id;
 
-  // 🆕 Goals aus customer_profiles laden (Fallback auf Defaults)
   const { data: profile } = await admin
     .from("customer_profiles")
     .select(
@@ -201,10 +199,43 @@ export default async function MePage() {
   const weightTarget = profile?.weight_target_kg || null;
 
   const now = new Date();
+  const nowIso = now.toISOString();
   const startOfDay = new Date(now);
   startOfDay.setHours(0, 0, 0, 0);
   const sixtyDaysAgo = new Date(now);
   sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
+  // 🆕 Coach-Notiz laden: erst persönlich, sonst global, sonst Fallback
+  let coachNote: string | null = null;
+
+  const { data: personalNote } = await admin
+    .from("coach_notes")
+    .select("content")
+    .eq("customer_id", customerId)
+    .eq("is_active", true)
+    .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (personalNote?.content) {
+    coachNote = personalNote.content;
+  } else if (coachId) {
+    const { data: globalNote } = await admin
+      .from("coach_notes")
+      .select("content")
+      .eq("coach_id", coachId)
+      .is("customer_id", null)
+      .eq("is_active", true)
+      .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (globalNote?.content) coachNote = globalNote.content;
+  }
+
+  const dailyTip = coachNote || pickFallbackTip(now);
+  const isRealNote = !!coachNote;
 
   const { data: lastCheckin } = await admin
     .from("checkins")
@@ -266,8 +297,6 @@ export default async function MePage() {
     { label: "Fat", value: todayTotals.fat, target: fatGoal, unit: "g" },
   ];
 
-  const dailyTip = pickDailyTip(now);
-
   return (
     <main className="min-h-screen px-6 py-12 max-w-md mx-auto">
       <header className="mb-12">
@@ -303,10 +332,7 @@ export default async function MePage() {
         </p>
         <div className="flex items-end justify-between gap-2 h-20">
           {weekData.map((day, idx) => (
-            <div
-              key={idx}
-              className="flex-1 flex flex-col items-center gap-2 h-full"
-            >
+            <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full">
               <div className="w-full flex-1 flex items-end">
                 <div
                   className={`w-full rounded-sm transition-all ${
@@ -401,7 +427,7 @@ export default async function MePage() {
 
       <section className="mb-10 border-t border-white/[0.08] pt-8">
         <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-4">
-          Coach&apos;s Tipp
+          {isRealNote ? "Nachricht vom Coach" : "Coach's Tipp"}
         </p>
         <blockquote className="border-l-2 border-gold/40 pl-4">
           <p className="font-serif text-base text-bone italic leading-relaxed mb-2">
