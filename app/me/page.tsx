@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const SESSION_COOKIE = "coach_customer_id";
+
+// Fallback-Defaults falls kein customer_profiles-Eintrag existiert
 const DEFAULT_KCAL_GOAL = 2000;
 const DEFAULT_PROTEIN_G = 150;
 const DEFAULT_CARBS_G = 200;
@@ -127,7 +129,8 @@ type WeekDay = {
 
 function buildWeekData(
   today: Date,
-  dailyKcals: Map<string, number>
+  dailyKcals: Map<string, number>,
+  kcalGoal: number
 ): WeekDay[] {
   const labels = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
   const weekStart = startOfWeekMonday(today);
@@ -143,9 +146,7 @@ function buildWeekData(
     const kcal = dailyKcals.get(key) || 0;
     const isToday = key === todayKey;
     const isFuture = d > todayMidnight;
-    const percent = isFuture
-      ? 0
-      : Math.min(100, (kcal / DEFAULT_KCAL_GOAL) * 100);
+    const percent = isFuture ? 0 : Math.min(100, (kcal / kcalGoal) * 100);
     result.push({ label: labels[i], kcal, percent, isToday, isFuture });
   }
   return result;
@@ -183,6 +184,21 @@ export default async function MePage() {
 
   const firstName = customer.first_name || "Member";
   const telegramUsername = customer.telegram_username || "";
+
+  // 🆕 Goals aus customer_profiles laden (Fallback auf Defaults)
+  const { data: profile } = await admin
+    .from("customer_profiles")
+    .select(
+      "daily_kcal_target, protein_target_g, carbs_target_g, fat_target_g, weight_target_kg"
+    )
+    .eq("customer_id", customerId)
+    .maybeSingle();
+
+  const kcalGoal = profile?.daily_kcal_target || DEFAULT_KCAL_GOAL;
+  const proteinGoal = profile?.protein_target_g || DEFAULT_PROTEIN_G;
+  const carbsGoal = profile?.carbs_target_g || DEFAULT_CARBS_G;
+  const fatGoal = profile?.fat_target_g || DEFAULT_FAT_G;
+  const weightTarget = profile?.weight_target_kg || null;
 
   const now = new Date();
   const startOfDay = new Date(now);
@@ -232,7 +248,7 @@ export default async function MePage() {
   });
 
   const streak = calculateStreak(loggedDates);
-  const weekData = buildWeekData(now, dailyKcals);
+  const weekData = buildWeekData(now, dailyKcals, kcalGoal);
 
   const { data: recentLogs } = await admin
     .from("food_logs")
@@ -244,10 +260,10 @@ export default async function MePage() {
   const logs = recentLogs || [];
 
   const macros: MacroRow[] = [
-    { label: "Kalorien", value: todayTotals.kcal, target: DEFAULT_KCAL_GOAL, unit: "kcal" },
-    { label: "Protein", value: todayTotals.protein, target: DEFAULT_PROTEIN_G, unit: "g" },
-    { label: "Carbs", value: todayTotals.carbs, target: DEFAULT_CARBS_G, unit: "g" },
-    { label: "Fat", value: todayTotals.fat, target: DEFAULT_FAT_G, unit: "g" },
+    { label: "Kalorien", value: todayTotals.kcal, target: kcalGoal, unit: "kcal" },
+    { label: "Protein", value: todayTotals.protein, target: proteinGoal, unit: "g" },
+    { label: "Carbs", value: todayTotals.carbs, target: carbsGoal, unit: "g" },
+    { label: "Fat", value: todayTotals.fat, target: fatGoal, unit: "g" },
   ];
 
   const dailyTip = pickDailyTip(now);
@@ -258,7 +274,6 @@ export default async function MePage() {
         <p className="font-serif text-base text-gold tracking-wide">Coach</p>
       </header>
 
-      {/* Hero */}
       <section className="mb-10">
         <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-3">
           Eingeloggt
@@ -282,7 +297,6 @@ export default async function MePage() {
         </p>
       </section>
 
-      {/* Diese Woche */}
       <section className="mb-10 border-t border-white/[0.08] pt-8">
         <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-5">
           Diese Woche
@@ -304,9 +318,7 @@ export default async function MePage() {
                         : "bg-gold/60"
                       : "bg-white/[0.06]"
                   }`}
-                  style={{
-                    height: `${Math.max(4, day.percent)}%`,
-                  }}
+                  style={{ height: `${Math.max(4, day.percent)}%` }}
                 />
               </div>
               <span
@@ -321,7 +333,6 @@ export default async function MePage() {
         </div>
       </section>
 
-      {/* Heute */}
       <section className="mb-10 border-t border-white/[0.08] pt-8">
         <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-5">
           Heute
@@ -339,6 +350,12 @@ export default async function MePage() {
                     <span className="text-bone-muted">
                       {" · "}
                       {lastCheckin.weight_kg} kg
+                      {weightTarget && (
+                        <span className="text-bone-faint">
+                          {" → "}
+                          {weightTarget} kg
+                        </span>
+                      )}
                     </span>
                   )}
                   {lastCheckin.mood_rating != null && (
@@ -382,7 +399,6 @@ export default async function MePage() {
         </div>
       </section>
 
-      {/* Coach's Tipp */}
       <section className="mb-10 border-t border-white/[0.08] pt-8">
         <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-4">
           Coach&apos;s Tipp
@@ -397,7 +413,6 @@ export default async function MePage() {
         </blockquote>
       </section>
 
-      {/* Aktivität */}
       <section className="mb-12 border-t border-white/[0.08] pt-8">
         <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-5">
           Aktivität
