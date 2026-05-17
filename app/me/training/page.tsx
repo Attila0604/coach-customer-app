@@ -5,12 +5,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const SESSION_COOKIE = "coach_customer_id";
 
-// Annahme: weekday 0=Mo ... 6=So (falls 1-7 ISO, einfach diese Konvertierung anpassen)
+// Annahme: weekday 0=Mo ... 6=So (falls 1-7 ISO, jsDayToDbWeekday flippen)
 const WEEKDAY_LABELS_SHORT = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 
 function jsDayToDbWeekday(jsDay: number): number {
   // JS getDay: 0=Su, 1=Mo, ..., 6=Sa
-  // DB: 0=Mo, 6=So
+  // DB-Annahme: 0=Mo, 6=So
   return (jsDay + 6) % 7;
 }
 
@@ -97,7 +97,10 @@ export default async function TrainingPage() {
         .select(
           "id, day_id, sort_order, name, sets, reps_min, reps_max, weight_kg, weight_type, notes, rest_seconds"
         )
-        .in("day_id", days.map((d) => d.id))
+        .in(
+          "day_id",
+          days.map((d) => d.id)
+        )
         .order("sort_order", { ascending: true });
 
       (exercisesData || []).forEach((ex) => {
