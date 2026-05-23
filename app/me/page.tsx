@@ -201,6 +201,7 @@ export default async function MePage() {
 
   const now = new Date();
   const nowIso = now.toISOString();
+  const todayIsoStr = dateKey(now);
   const startOfDay = new Date(now);
   startOfDay.setHours(0, 0, 0, 0);
   const sixtyDaysAgo = new Date(now);
@@ -289,6 +290,36 @@ export default async function MePage() {
     .limit(5);
 
   const logs = recentLogs || [];
+
+  // Today's published meal plan (Coach has approved it)
+  const { data: todayPlanRaw } = await admin
+    .from("meal_plans")
+    .select("id, meals, total_kcal")
+    .eq("customer_id", customerId)
+    .eq("status", "published")
+    .eq("plan_date", todayIsoStr)
+    .maybeSingle();
+
+  const todayPlan = todayPlanRaw
+    ? {
+        meals: Array.isArray(todayPlanRaw.meals) ? todayPlanRaw.meals : [],
+        kcal: Number(todayPlanRaw.total_kcal) || 0,
+      }
+    : null;
+
+  // If no plan for today, check if any future published plan exists (for hint)
+  let hasUpcomingPlan = false;
+  if (!todayPlan) {
+    const { data: anyFuture } = await admin
+      .from("meal_plans")
+      .select("id")
+      .eq("customer_id", customerId)
+      .eq("status", "published")
+      .gt("plan_date", todayIsoStr)
+      .limit(1)
+      .maybeSingle();
+    hasUpcomingPlan = !!anyFuture;
+  }
 
   const macros: MacroRow[] = [
     { label: "Kalorien", value: todayTotals.kcal, target: kcalGoal, unit: "kcal" },
@@ -423,6 +454,31 @@ export default async function MePage() {
             })}
           </div>
         </div>
+      </section>
+
+      {/* NEW: Nutrition plan preview */}
+      <section className="mb-10 border-t border-white/[0.08] pt-8">
+        <Link href="/me/nutrition" className="block group">
+          <div className="flex justify-between items-baseline">
+            <p className="text-[11px] uppercase tracking-caps text-gold font-medium">
+              Ernährungsplan
+            </p>
+            <span className="text-gold text-sm group-hover:translate-x-1 transition-transform inline-block">
+              →
+            </span>
+          </div>
+          <p className="text-sm text-bone-muted mt-2">
+            {todayPlan
+              ? `${todayPlan.meals.length} ${
+                  todayPlan.meals.length === 1 ? "Mahlzeit" : "Mahlzeiten"
+                } heute · ${Math.round(todayPlan.kcal).toLocaleString(
+                  "de-DE"
+                )} kcal`
+              : hasUpcomingPlan
+              ? "Plan für die kommenden Tage ansehen"
+              : "Noch kein Plan veröffentlicht"}
+          </p>
+        </Link>
       </section>
 
       <section className="mb-10 border-t border-white/[0.08] pt-8">
