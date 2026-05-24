@@ -2,15 +2,13 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
+import StartWorkoutButton from "@/components/workout/StartWorkoutButton";
 
 const SESSION_COOKIE = "coach_customer_id";
 
-// Annahme: weekday 0=Mo ... 6=So (falls 1-7 ISO, jsDayToDbWeekday flippen)
 const WEEKDAY_LABELS_SHORT = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 
 function jsDayToDbWeekday(jsDay: number): number {
-  // JS getDay: 0=Su, 1=Mo, ..., 6=Sa
-  // DB-Annahme: 0=Mo, 6=So
   return (jsDay + 6) % 7;
 }
 
@@ -69,14 +67,27 @@ export default async function TrainingPage() {
 
   const admin = createAdminClient();
 
-  const { data: plan } = await admin
-    .from("training_plans")
-    .select("id, name, weeks, current_week, status, start_date")
-    .eq("customer_id", customerId)
-    .eq("status", "active")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const [planRes, activeSessionRes] = await Promise.all([
+    admin
+      .from("training_plans")
+      .select("id, name, weeks, current_week, status, start_date")
+      .eq("customer_id", customerId)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    admin
+      .from("workout_sessions")
+      .select("id, status, day_id, started_at")
+      .eq("customer_id", customerId)
+      .in("status", ["in_progress", "paused"])
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  const plan = planRes.data;
+  const activeSession = activeSessionRes.data;
 
   let days: TrainingDay[] = [];
   const exercisesByDay = new Map<string, Exercise[]>();
@@ -97,10 +108,7 @@ export default async function TrainingPage() {
         .select(
           "id, day_id, sort_order, name, sets, reps_min, reps_max, weight_kg, weight_type, notes, rest_seconds"
         )
-        .in(
-          "day_id",
-          days.map((d) => d.id)
-        )
+        .in("day_id", days.map((d) => d.id))
         .order("sort_order", { ascending: true });
 
       (exercisesData || []).forEach((ex) => {
@@ -129,6 +137,24 @@ export default async function TrainingPage() {
       <header className="mb-12">
         <p className="font-serif text-base text-gold tracking-wide">Coach</p>
       </header>
+
+      {/* RESUME-BANNER wenn aktive Session */}
+      {activeSession && (
+        <section className="mb-10 p-5 border border-gold/40 bg-gold/[0.04]">
+          <p className="text-[10px] uppercase tracking-caps text-gold font-medium mb-2">
+            {activeSession.status === "paused" ? "Pausiertes Workout" : "Workout läuft"}
+          </p>
+          <p className="text-sm text-bone-muted mb-4">
+            Du hast ein Workout {activeSession.status === "paused" ? "pausiert" : "begonnen"} und nicht beendet.
+          </p>
+          <Link
+            href={`/me/training/session/${activeSession.id}`}
+            className="inline-block text-[11px] uppercase tracking-caps font-medium px-4 py-2.5 border border-gold text-gold bg-gold/5 hover:bg-gold/15 transition"
+          >
+            ▶ Fortsetzen
+          </Link>
+        </section>
+      )}
 
       <section className="mb-10">
         <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-3">
@@ -198,9 +224,7 @@ export default async function TrainingPage() {
                     </div>
                     <span
                       className={`text-[10px] uppercase tracking-wider ${
-                        isToday
-                          ? "text-gold font-medium"
-                          : "text-bone-faint"
+                        isToday ? "text-gold font-medium" : "text-bone-faint"
                       }`}
                     >
                       {label}
@@ -231,47 +255,46 @@ export default async function TrainingPage() {
                   {todaysDay.title}
                 </h2>
                 {todaysDay.subtitle && (
-                  <p className="text-sm text-bone-muted">
-                    {todaysDay.subtitle}
-                  </p>
+                  <p className="text-sm text-bone-muted">{todaysDay.subtitle}</p>
                 )}
               </div>
 
               {(exercisesByDay.get(todaysDay.id) || []).length > 0 ? (
-                <ul className="space-y-5">
-                  {(exercisesByDay.get(todaysDay.id) || []).map((ex) => (
-                    <li
-                      key={ex.id}
-                      className="border-l-2 border-gold/40 pl-4"
-                    >
-                      <div className="flex justify-between items-baseline gap-3 mb-1">
-                        <p className="text-sm text-bone font-medium">
-                          {ex.name}
-                        </p>
-                        <p className="text-sm text-bone tabular-nums whitespace-nowrap">
-                          {ex.sets && (
-                            <>
-                              {ex.sets} × {formatReps(ex.reps_min, ex.reps_max)}
-                            </>
+                <>
+                  <ul className="space-y-5 mb-6">
+                    {(exercisesByDay.get(todaysDay.id) || []).map((ex) => (
+                      <li
+                        key={ex.id}
+                        className="border-l-2 border-gold/40 pl-4"
+                      >
+                        <div className="flex justify-between items-baseline gap-3 mb-1">
+                          <p className="text-sm text-bone font-medium">{ex.name}</p>
+                          <p className="text-sm text-bone tabular-nums whitespace-nowrap">
+                            {ex.sets && (
+                              <>
+                                {ex.sets} × {formatReps(ex.reps_min, ex.reps_max)}
+                              </>
+                            )}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-x-3 text-[11px] text-bone-faint">
+                          {ex.weight_kg != null && <span>{ex.weight_kg} kg</span>}
+                          {ex.rest_seconds != null && (
+                            <span>{formatRest(ex.rest_seconds)} Pause</span>
                           )}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-x-3 text-[11px] text-bone-faint">
-                        {ex.weight_kg != null && (
-                          <span>{ex.weight_kg} kg</span>
+                        </div>
+                        {ex.notes && (
+                          <p className="text-[11px] text-bone-muted italic mt-1.5">
+                            {ex.notes}
+                          </p>
                         )}
-                        {ex.rest_seconds != null && (
-                          <span>{formatRest(ex.rest_seconds)} Pause</span>
-                        )}
-                      </div>
-                      {ex.notes && (
-                        <p className="text-[11px] text-bone-muted italic mt-1.5">
-                          {ex.notes}
-                        </p>
-                      )}
-                    </li>
-                  ))}
-                </ul>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* TRAINING STARTEN Button — nur wenn keine aktive Session */}
+                  {!activeSession && <StartWorkoutButton dayId={todaysDay.id} />}
+                </>
               ) : (
                 <p className="text-sm text-bone-faint italic">
                   Noch keine Übungen für diesen Tag definiert.
@@ -347,8 +370,7 @@ export default async function TrainingPage() {
                               <span className="text-sm text-bone-muted tabular-nums whitespace-nowrap flex-shrink-0">
                                 {ex.sets && (
                                   <>
-                                    {ex.sets} ×{" "}
-                                    {formatReps(ex.reps_min, ex.reps_max)}
+                                    {ex.sets} × {formatReps(ex.reps_min, ex.reps_max)}
                                   </>
                                 )}
                                 {ex.weight_kg != null && (
