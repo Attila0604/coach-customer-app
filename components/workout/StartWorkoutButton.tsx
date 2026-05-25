@@ -4,12 +4,16 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { startWorkoutSession } from '@/lib/actions/workout';
 
+type Variant = 'primary' | 'subtle';
+
 export default function StartWorkoutButton({
   dayId,
-  label = '▶ Training starten',
+  label,
+  variant = 'primary',
 }: {
   dayId: string;
   label?: string;
+  variant?: Variant;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -27,6 +31,24 @@ export default function StartWorkoutButton({
     });
   }
 
+  if (variant === 'subtle') {
+    return (
+      <div>
+        <button
+          type="button"
+          onClick={handleClick}
+          disabled={isPending}
+          className="text-[10px] uppercase tracking-caps font-medium px-3 py-2 border border-gold/40 text-gold/90 hover:bg-gold/10 transition disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          {isPending ? 'Starte …' : label || '▶ Diesen Tag starten'}
+        </button>
+        {error && (
+          <p className="text-[11px] text-red-400 italic mt-1.5">{error}</p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div>
       <button
@@ -35,7 +57,7 @@ export default function StartWorkoutButton({
         disabled={isPending}
         className="w-full text-[12px] uppercase tracking-caps font-medium px-6 py-4 border border-gold text-gold bg-gold/5 hover:bg-gold/15 transition disabled:opacity-30 disabled:cursor-not-allowed"
       >
-        {isPending ? 'Starte ...' : label}
+        {isPending ? 'Starte …' : label || '▶ Training starten'}
       </button>
       {error && (
         <p className="text-[11px] text-red-400 italic mt-2">{error}</p>
