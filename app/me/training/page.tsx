@@ -358,31 +358,36 @@ export default async function TrainingPage() {
                         )}
                       </div>
                       {dayExercises.length > 0 ? (
-                        <ul className="space-y-2.5 mt-3">
-                          {dayExercises.map((ex) => (
-                            <li
-                              key={ex.id}
-                              className="flex justify-between items-baseline gap-3"
-                            >
-                              <span className="text-sm text-bone min-w-0 truncate">
-                                {ex.name}
-                              </span>
-                              <span className="text-sm text-bone-muted tabular-nums whitespace-nowrap flex-shrink-0">
-                                {ex.sets && (
-                                  <>
-                                    {ex.sets} × {formatReps(ex.reps_min, ex.reps_max)}
-                                  </>
-                                )}
-                                {ex.weight_kg != null && (
-                                  <span className="text-bone-faint">
-                                    {" · "}
-                                    {ex.weight_kg}kg
-                                  </span>
-                                )}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
+                        <>
+                          <ul className="space-y-2.5 mt-3 mb-4">
+                            {dayExercises.map((ex) => (
+                              <li
+                                key={ex.id}
+                                className="flex justify-between items-baseline gap-3"
+                              >
+                                <span className="text-sm text-bone min-w-0 truncate">
+                                  {ex.name}
+                                </span>
+                                <span className="text-sm text-bone-muted tabular-nums whitespace-nowrap flex-shrink-0">
+                                  {ex.sets && (
+                                    <>
+                                      {ex.sets} × {formatReps(ex.reps_min, ex.reps_max)}
+                                    </>
+                                  )}
+                                  {ex.weight_kg != null && (
+                                    <span className="text-bone-faint">
+                                      {" · "}
+                                      {ex.weight_kg}kg
+                                    </span>
+                                  )}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                          {!activeSession && (
+                            <StartWorkoutButton dayId={day.id} variant="subtle" />
+                          )}
+                        </>
                       ) : (
                         <p className="text-[11px] text-bone-faint italic mt-2">
                           Keine Übungen.
