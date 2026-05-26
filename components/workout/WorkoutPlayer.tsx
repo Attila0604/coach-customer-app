@@ -121,6 +121,8 @@ export default function WorkoutPlayer({ session }: { session: Session }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [isPaused, setIsPaused] = useState(session.status === 'paused');
+  const [showAbortConfirm, setShowAbortConfirm] = useState(false);
+  const [showSkipConfirm, setShowSkipConfirm] = useState(false);
 
   const currentExercise = exercises[currentExIdx];
   const totalSets = exercises.reduce((sum, e) => sum + (e.sets || 0), 0);
@@ -231,7 +233,11 @@ export default function WorkoutPlayer({ session }: { session: Session }) {
   }
 
   function handleSkipExercise() {
-    if (!confirm('Diese Übung überspringen?')) return;
+    setShowSkipConfirm(true);
+  }
+
+  function confirmSkipExercise() {
+    setShowSkipConfirm(false);
     if (isLastExercise) {
       handleComplete();
       return;
@@ -270,7 +276,11 @@ export default function WorkoutPlayer({ session }: { session: Session }) {
   }
 
   function handleAbort() {
-    if (!confirm('Workout wirklich abbrechen? Bisherige Sätze bleiben gespeichert.')) return;
+    setShowAbortConfirm(true);
+  }
+
+  function confirmAbort() {
+    setShowAbortConfirm(false);
     startTransition(async () => {
       const result = await abortWorkoutSession(session.id);
       if (result.ok) {
@@ -381,6 +391,26 @@ export default function WorkoutPlayer({ session }: { session: Session }) {
   // MAIN PLAYER UI
   return (
     <main className="min-h-screen flex flex-col bg-black">
+      {showAbortConfirm && (
+        <ConfirmModal
+          title="Workout abbrechen?"
+          message="Bisherige Sätze bleiben gespeichert. Du kannst dieses Workout nicht fortsetzen."
+          confirmLabel="Ja, abbrechen"
+          confirmStyle="danger"
+          onConfirm={confirmAbort}
+          onCancel={() => setShowAbortConfirm(false)}
+        />
+      )}
+      {showSkipConfirm && (
+        <ConfirmModal
+          title="Übung überspringen?"
+          message="Du gehst direkt zur nächsten Übung weiter."
+          confirmLabel="Ja, überspringen"
+          confirmStyle="primary"
+          onConfirm={confirmSkipExercise}
+          onCancel={() => setShowSkipConfirm(false)}
+        />
+      )}
       {/* Sticky Header */}
       <header className="sticky top-0 z-10 bg-black border-b border-white/[0.06] px-6 py-4 flex items-center justify-between gap-4">
         <button
@@ -547,6 +577,61 @@ export default function WorkoutPlayer({ session }: { session: Session }) {
         </div>
       )}
     </main>
+  );
+}
+
+function ConfirmModal({
+  title,
+  message,
+  confirmLabel,
+  confirmStyle = 'primary',
+  onConfirm,
+  onCancel,
+}: {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  confirmStyle?: 'primary' | 'danger';
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm px-6"
+      onClick={onCancel}
+    >
+      <div
+        className="w-full max-w-sm bg-black border border-white/[0.12] p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="font-serif text-2xl text-bone leading-tight mb-3">
+          {title}
+        </h2>
+        <p className="text-sm text-bone-muted leading-relaxed mb-6">
+          {message}
+        </p>
+        <div className="flex flex-col gap-2.5">
+          <button
+            type="button"
+            onClick={onConfirm}
+            className={
+              confirmStyle === 'danger'
+                ? 'w-full text-[12px] uppercase tracking-caps font-medium px-5 py-3 border border-red-400/60 text-red-400 hover:bg-red-400/10 transition'
+                : 'w-full text-[12px] uppercase tracking-caps font-medium px-5 py-3 border border-gold text-gold bg-gold/5 hover:bg-gold/15 transition'
+            }
+          >
+            {confirmLabel}
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="w-full text-[11px] uppercase tracking-caps font-medium px-5 py-3 border border-white/15 text-bone-muted hover:text-bone hover:border-white/30 transition"
+          >
+            Abbrechen
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
