@@ -10,3 +10,87 @@
     background: #0F0E0C;
   }
 }
+
+/* ==========================================================================
+   Animationen & Skeleton-Loading (Phase J Polish)
+   ========================================================================== */
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes flamePulse {
+  0%,
+  100% {
+    transform: scale(1) rotate(-2deg);
+  }
+  50% {
+    transform: scale(1.15) rotate(2deg);
+  }
+}
+
+@keyframes barGrow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+/* Shimmer-Platzhalter im Premium-Look (ink/bone Palette) */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(242, 239, 232, 0.04) 0%,
+    rgba(242, 239, 232, 0.1) 50%,
+    rgba(242, 239, 232, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+/* Sanftes Einblenden von Sektionen beim Laden */
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out both;
+}
+
+/* Streak-Flamme: dezenter Puls */
+.animate-flame {
+  display: inline-block;
+  transform-origin: center bottom;
+  animation: flamePulse 2.4s ease-in-out infinite;
+}
+
+/* Wochen-Balken wachsen von unten hoch */
+.animate-bar {
+  transform-origin: bottom;
+  animation: barGrow 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Barrierefreiheit: bei reduzierter Bewegung alles ruhig stellen */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton,
+  .animate-fade-in-up,
+  .animate-flame,
+  .animate-bar {
+    animation: none;
+  }
+}
