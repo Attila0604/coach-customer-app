@@ -90,31 +90,80 @@ function formatMealLabel(
   return `${typeDe}: ${desc}`;
 }
 
+// ============================================================================
+// Zeitzonen-Helfer — alles in Europe/Vienna, konsistent mit dem Coach-Dashboard.
+// Vercel läuft auf UTC, daher NICHT setHours()/getDate() (= Server-Zeit) verwenden.
+// ============================================================================
+const TZ = "Europe/Vienna";
+
+// "YYYY-MM-DD" in Wien-Lokalzeit (DST-sicher)
 function dateKey(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return d.toLocaleDateString("sv-SE", { timeZone: TZ });
+}
+
+// Wiens UTC-Offset (ms) zu einem Zeitpunkt — +1h Winter, +2h Sommer (DST-sicher)
+function viennaOffsetMs(at: Date): number {
+  const p: Record<string, string> = {};
+  for (const part of new Intl.DateTimeFormat("en-US", {
+    timeZone: TZ,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(at)) {
+    p[part.type] = part.value;
+  }
+  const hour = p.hour === "24" ? 0 : Number(p.hour);
+  const asWall = Date.UTC(
+    Number(p.year),
+    Number(p.month) - 1,
+    Number(p.day),
+    hour,
+    Number(p.minute),
+    Number(p.second)
+  );
+  return asWall - at.getTime();
+}
+
+// UTC-Instant von Wien-Mitternacht für den Wien-Tag, der `d` enthält (Mittag-Anker)
+function viennaStartOfDayUtc(d: Date): Date {
+  const key = dateKey(d);
+  const offset = viennaOffsetMs(new Date(`${key}T12:00:00Z`));
+  return new Date(new Date(`${key}T00:00:00Z`).getTime() - offset);
+}
+
+// Mittag-UTC-Anker des Wien-Tags von `d` — sicher fürs Tag-für-Tag-Springen
+function viennaNoonAnchor(d: Date): Date {
+  return new Date(`${dateKey(d)}T12:00:00Z`);
+}
+
+// Wochentag in Wien: 0=So .. 6=Sa
+function viennaDow(d: Date): number {
+  const wd = new Intl.DateTimeFormat("en-US", { timeZone: TZ, weekday: "short" }).format(d);
+  return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(wd);
 }
 
 function startOfWeekMonday(date: Date): Date {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  const dow = d.getDay();
+  const anchor = viennaNoonAnchor(date);
+  const dow = viennaDow(anchor);
   const diff = dow === 0 ? -6 : 1 - dow;
-  d.setDate(d.getDate() + diff);
-  return d;
+  anchor.setUTCDate(anchor.getUTCDate() + diff);
+  return anchor;
 }
 
 function calculateStreak(loggedDates: Set<string>): number {
   if (loggedDates.size === 0) return 0;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const checkDate = new Date(today);
+  const checkDate = viennaNoonAnchor(new Date());
   if (!loggedDates.has(dateKey(checkDate))) {
-    checkDate.setDate(checkDate.getDate() - 1);
+    checkDate.setUTCDate(checkDate.getUTCDate() - 1);
   }
   let streak = 0;
   while (loggedDates.has(dateKey(checkDate))) {
     streak++;
-    checkDate.setDate(checkDate.getDate() - 1);
+    checkDate.setUTCDate(checkDate.getUTCDate() - 1);
   }
   return streak;
 }
@@ -135,17 +184,15 @@ function buildWeekData(
   const labels = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
   const weekStart = startOfWeekMonday(today);
   const todayKey = dateKey(today);
-  const todayMidnight = new Date(today);
-  todayMidnight.setHours(23, 59, 59, 999);
   const result: WeekDay[] = [];
 
   for (let i = 0; i < 7; i++) {
     const d = new Date(weekStart);
-    d.setDate(weekStart.getDate() + i);
+    d.setUTCDate(weekStart.getUTCDate() + i);
     const key = dateKey(d);
     const kcal = dailyKcals.get(key) || 0;
     const isToday = key === todayKey;
-    const isFuture = d > todayMidnight;
+    const isFuture = key > todayKey; // "YYYY-MM-DD"-Strings vergleichen sich chronologisch
     const percent = isFuture ? 0 : Math.min(100, (kcal / kcalGoal) * 100);
     result.push({ label: labels[i], kcal, percent, isToday, isFuture });
   }
@@ -202,8 +249,7 @@ export default async function MePage() {
   const now = new Date();
   const nowIso = now.toISOString();
   const todayIsoStr = dateKey(now);
-  const startOfDay = new Date(now);
-  startOfDay.setHours(0, 0, 0, 0);
+  const startOfDay = viennaStartOfDayUtc(now);
   const sixtyDaysAgo = new Date(now);
   sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
