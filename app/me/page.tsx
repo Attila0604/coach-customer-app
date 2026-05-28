@@ -380,7 +380,7 @@ export default async function MePage() {
         <p className="font-serif text-base text-gold tracking-wide">Coach</p>
       </header>
 
-      <section className="mb-10">
+      <section className="mb-10 animate-fade-in-up">
         <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-3">
           Eingeloggt
         </p>
@@ -393,7 +393,8 @@ export default async function MePage() {
             <>
               <span className="mx-2 text-bone-faint">·</span>
               <span className="text-gold">
-                🔥 {streak} {streak === 1 ? "Tag" : "Tage"} Streak
+                <span className="animate-flame">🔥</span> {streak}{" "}
+                {streak === 1 ? "Tag" : "Tage"} Streak
               </span>
             </>
           )}
@@ -412,7 +413,7 @@ export default async function MePage() {
             <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full">
               <div className="w-full flex-1 flex items-end">
                 <div
-                  className={`w-full rounded-sm transition-all ${
+                  className={`w-full rounded-sm transition-all animate-bar ${
                     day.isFuture
                       ? "bg-white/[0.04]"
                       : day.percent > 0
@@ -421,7 +422,10 @@ export default async function MePage() {
                         : "bg-gold/60"
                       : "bg-white/[0.06]"
                   }`}
-                  style={{ height: `${Math.max(4, day.percent)}%` }}
+                  style={{
+                    height: `${Math.max(4, day.percent)}%`,
+                    animationDelay: `${idx * 60}ms`,
+                  }}
                 />
               </div>
               <span
