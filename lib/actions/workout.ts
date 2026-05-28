@@ -106,12 +106,29 @@ export async function startWorkoutSession(dayId: string): Promise<StartResult> {
       }
       return { ok: true, sessionId: existing.id, resumed: true };
     }
-    // Different day → abort old
+    // Different day → abort old (inkl. Dauer berechnen)
+    const { data: oldSession } = await supabase
+      .from('workout_sessions')
+      .select('started_at')
+      .eq('id', existing.id)
+      .maybeSingle();
+
+    const oldEndedAt = new Date();
+    const oldDurationSeconds = oldSession?.started_at
+      ? Math.max(
+          1,
+          Math.round(
+            (oldEndedAt.getTime() - new Date(oldSession.started_at).getTime()) / 1000
+          )
+        )
+      : null;
+
     await supabase
       .from('workout_sessions')
       .update({
         status: 'aborted',
-        ended_at: new Date().toISOString(),
+        ended_at: oldEndedAt.toISOString(),
+        total_duration_seconds: oldDurationSeconds,
       })
       .eq('id', existing.id);
   }
@@ -360,18 +377,27 @@ export async function abortWorkoutSession(sessionId: string): Promise<ActionResu
 
   const { data: session } = await supabase
     .from('workout_sessions')
-    .select('id, customer_id')
+    .select('id, customer_id, started_at, status')
     .eq('id', sessionId)
     .maybeSingle();
 
   if (!session) return { ok: false, error: 'Session nicht gefunden.' };
   if (session.customer_id !== customerId) return { ok: false, error: 'Keine Berechtigung.' };
 
+  // Dauer berechnen (gleiches Muster wie completeWorkoutSession)
+  const startedAt = new Date(session.started_at);
+  const endedAt = new Date();
+  const durationSeconds = Math.max(
+    1,
+    Math.round((endedAt.getTime() - startedAt.getTime()) / 1000)
+  );
+
   const { error } = await supabase
     .from('workout_sessions')
     .update({
       status: 'aborted',
-      ended_at: new Date().toISOString(),
+      ended_at: endedAt.toISOString(),
+      total_duration_seconds: durationSeconds,
     })
     .eq('id', sessionId);
 
