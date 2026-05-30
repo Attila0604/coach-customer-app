@@ -482,6 +482,24 @@ export default async function MePage() {
       </section>
 
       <section className="mb-10 border-t border-white/[0.08] pt-8">
+        <Link href="/me/checkin" className="block group">
+          <div className="flex justify-between items-baseline">
+            <p className="text-[11px] uppercase tracking-caps text-gold font-medium">
+              Check-in
+            </p>
+            <span className="text-gold text-sm group-hover:translate-x-1 transition-transform inline-block">
+              →
+            </span>
+          </div>
+          <p className="text-sm text-bone-muted mt-2">
+            {lastCheckin
+              ? `Zuletzt ${timeAgoDe(lastCheckin.created_at)} · aktualisieren`
+              : "Gewicht & Befinden dieser Woche eintragen"}
+          </p>
+        </Link>
+      </section>
+
+      <section className="mb-10 border-t border-white/[0.08] pt-8">
         <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-4">
           {isRealNote ? "Nachricht vom Coach" : "Coach's Tipp"}
         </p>

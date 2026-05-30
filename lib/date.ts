@@ -60,3 +60,13 @@ export function viennaDow(d: Date): number {
   }).format(d);
   return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(wd);
 }
+
+// "YYYY-MM-DD" des Montags der Wien-Woche, die `d` enthält.
+// Passt zur checkins.week_of-Konvention (Montag als Wochen-Anker).
+export function viennaMondayKey(d: Date = new Date()): string {
+  const anchor = viennaNoonAnchor(d);
+  const dow = viennaDow(anchor); // 0=So .. 6=Sa
+  const diff = dow === 0 ? -6 : 1 - dow; // zurück zum Montag
+  anchor.setUTCDate(anchor.getUTCDate() + diff);
+  return viennaDateKey(anchor);
+}
