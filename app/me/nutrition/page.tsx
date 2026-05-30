@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { viennaDateKey } from "@/lib/date";
 
 const SESSION_COOKIE = "coach_customer_id";
 
@@ -68,8 +69,7 @@ type PublishedPlan = {
 };
 
 function todayIso(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return viennaDateKey(new Date());
 }
 
 function plusDaysIso(iso: string, days: number): string {

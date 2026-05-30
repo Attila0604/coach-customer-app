@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import StartWorkoutButton from "@/components/workout/StartWorkoutButton";
+import { viennaDow } from "@/lib/date";
 
 const SESSION_COOKIE = "coach_customer_id";
 
@@ -118,8 +119,7 @@ export default async function TrainingPage() {
     }
   }
 
-  const today = new Date();
-  const todayDbWeekday = jsDayToDbWeekday(today.getDay());
+  const todayDbWeekday = jsDayToDbWeekday(viennaDow(new Date()));
   const todaysDay = days.find((d) => d.weekday === todayDbWeekday) || null;
   const trainingWeekdays = new Set(
     days.filter((d) => d.weekday != null).map((d) => d.weekday as number)

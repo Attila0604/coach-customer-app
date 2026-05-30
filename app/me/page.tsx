@@ -2,6 +2,12 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  viennaDateKey as dateKey,
+  viennaStartOfDayUtc,
+  viennaNoonAnchor,
+  viennaDow,
+} from "@/lib/date";
 
 const SESSION_COOKIE = "coach_customer_id";
 
@@ -88,62 +94,6 @@ function formatMealLabel(
     MEAL_TYPE_DE[typeKey] ||
     meal_type.charAt(0).toUpperCase() + meal_type.slice(1).toLowerCase();
   return `${typeDe}: ${desc}`;
-}
-
-// ============================================================================
-// Zeitzonen-Helfer — alles in Europe/Vienna, konsistent mit dem Coach-Dashboard.
-// Vercel läuft auf UTC, daher NICHT setHours()/getDate() (= Server-Zeit) verwenden.
-// ============================================================================
-const TZ = "Europe/Vienna";
-
-// "YYYY-MM-DD" in Wien-Lokalzeit (DST-sicher)
-function dateKey(d: Date): string {
-  return d.toLocaleDateString("sv-SE", { timeZone: TZ });
-}
-
-// Wiens UTC-Offset (ms) zu einem Zeitpunkt — +1h Winter, +2h Sommer (DST-sicher)
-function viennaOffsetMs(at: Date): number {
-  const p: Record<string, string> = {};
-  for (const part of new Intl.DateTimeFormat("en-US", {
-    timeZone: TZ,
-    hour12: false,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  }).formatToParts(at)) {
-    p[part.type] = part.value;
-  }
-  const hour = p.hour === "24" ? 0 : Number(p.hour);
-  const asWall = Date.UTC(
-    Number(p.year),
-    Number(p.month) - 1,
-    Number(p.day),
-    hour,
-    Number(p.minute),
-    Number(p.second)
-  );
-  return asWall - at.getTime();
-}
-
-// UTC-Instant von Wien-Mitternacht für den Wien-Tag, der `d` enthält (Mittag-Anker)
-function viennaStartOfDayUtc(d: Date): Date {
-  const key = dateKey(d);
-  const offset = viennaOffsetMs(new Date(`${key}T12:00:00Z`));
-  return new Date(new Date(`${key}T00:00:00Z`).getTime() - offset);
-}
-
-// Mittag-UTC-Anker des Wien-Tags von `d` — sicher fürs Tag-für-Tag-Springen
-function viennaNoonAnchor(d: Date): Date {
-  return new Date(`${dateKey(d)}T12:00:00Z`);
-}
-
-// Wochentag in Wien: 0=So .. 6=Sa
-function viennaDow(d: Date): number {
-  const wd = new Intl.DateTimeFormat("en-US", { timeZone: TZ, weekday: "short" }).format(d);
-  return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(wd);
 }
 
 function startOfWeekMonday(date: Date): Date {
