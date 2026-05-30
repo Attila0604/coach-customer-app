@@ -117,25 +117,30 @@ Tabellen und wer sie wie nutzt (B = coach-bot, A = coach-app, C = coach-customer
 
 ## 4. Offene Punkte / bekannte Inkonsistenzen
 
-> Beim Beheben hier abhaken/aktualisieren.
+> Beim Beheben hier abhaken/aktualisieren. **Stand: alle 6 Punkte adressiert.**
 
-1. **Unversioniertes DB-Schema.** Das einzige SQL im System (`coach-bot/sql/001_init.sql`)
-   ist nur das MVP-Initialschema. Es fehlen alle später hinzugefügten Tabellen
+1. ~~**Unversioniertes DB-Schema.** Die später hinzugefügten Tabellen
    (`training_*`, `workout_*`, `meal_plans`, `coach_notes`, `magic_codes`) und Felder
-   (`coaches.role/user_id`, `customer_profiles.goal/experience_level/equipment/...`).
-   Diese Migrationen existieren nur live in Supabase → **kein reproduzierbares Schema**.
-2. **Zeitzonen-Inkonsistenz (dieses Repo).** `app/me/page.tsx` rechnet DST-sicher in
-   `Europe/Vienna`. `app/me/nutrition/page.tsx` und `app/me/training/page.tsx` nutzen
-   dagegen Server-Lokalzeit (`getDate()`/`getDay()`) → auf Vercel (UTC) falsches "heute".
-   Referenz-Implementierung: `coach-app/lib/coach-customer-helpers.ts`.
-3. **Falsch benannter Ordner.** Es existiert `app/me Dateiname: loading.tsx/loading.tsx`
-   statt `app/me/loading.tsx` → das Dashboard `/me` hat keinen Loading-Skeleton.
-4. **Debug-Logs.** `app/page.tsx` enthält `console.log`-Reste mit Emojis im
-   `handleSubmit`.
-5. **`meal_type`-Konvention uneinheitlich:** `food_logs` deutsch vs. `meal_plans.meals`
-   englisch. UI mappt beides, aber Quelle der Wahrheit ist uneinheitlich.
-6. **Toter Code:** `coach-app` prüft `messages.direction === 'outbound'`, das DB-Enum
-   kennt aber nur `'in'`/`'out'`.
+   waren nur live in Supabase, nicht versioniert.~~ ✅ Behoben — rekonstruiertes Schema
+   unter `db/schema.reference.sql` (PR #5). **To-do:** durch echten
+   `supabase db dump` ersetzen, sobald verfügbar.
+2. ~~**Zeitzonen-Inkonsistenz.** `nutrition`/`training` nutzten Server-Lokalzeit
+   statt `Europe/Vienna` → auf Vercel (UTC) falsches "heute".~~ ✅ Behoben —
+   gemeinsame DST-sichere Helfer in `lib/date.ts` (PR #3).
+3. ~~**Falsch benannter Ordner** `app/me Dateiname: loading.tsx/loading.tsx`.~~
+   ✅ Behoben — Datei liegt jetzt unter `app/me/loading.tsx` (PR #2).
+4. ~~**Debug-Logs** in `app/page.tsx` (`handleSubmit`).~~ ✅ Behoben — entfernt (PR #2).
+5. ~~**`meal_type`-Konvention uneinheitlich** (`food_logs` deutsch vs.
+   `meal_plans.meals` englisch).~~ ✅ Konsumseite robust gemacht — zentrale
+   Normalisierung in `lib/meals.ts` (PR #4). Die DB-Konvention selbst bleibt
+   uneinheitlich (bewusst, da Änderung Bot + Coach-App + Migration beträfe).
+6. ~~**Toter Code:** `coach-app` prüfte `messages.direction === 'outbound'`, das
+   DB-Enum kennt nur `'in'`/`'out'`.~~ ✅ Behoben im Repo `coach-app`.
+
+### Neue / verbleibende To-dos
+- `db/schema.reference.sql` durch echten `supabase db dump` ersetzen (autoritativ).
+- Optional: `package-lock.json` in `coach-customer-app` einchecken (reproduzierbare Builds).
+- `AGENTS.md` auch in `coach-bot` und `coach-app` anlegen (eigene Agenten je Repo).
 
 ---
 
