@@ -3,29 +3,9 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { viennaDateKey } from "@/lib/date";
+import { mealTypeLabelDe, mealTypeEmoji, mealTypeOrder } from "@/lib/meals";
 
 const SESSION_COOKIE = "coach_customer_id";
-
-const MEAL_TYPE_DE: Record<string, string> = {
-  breakfast: "Frühstück",
-  lunch: "Mittagessen",
-  dinner: "Abendessen",
-  snack: "Snack",
-};
-
-const MEAL_TYPE_EMOJIS: Record<string, string> = {
-  breakfast: "🌅",
-  lunch: "☀️",
-  dinner: "🌙",
-  snack: "🍎",
-};
-
-const MEAL_TYPE_ORDER: Record<string, number> = {
-  breakfast: 0,
-  lunch: 1,
-  dinner: 2,
-  snack: 3,
-};
 
 const WEEKDAY_SHORT_DE = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
 const WEEKDAY_LONG_DE = [
@@ -103,11 +83,9 @@ function formatDateDe(iso: string): string {
 }
 
 function sortMeals(meals: Meal[]): Meal[] {
-  return [...meals].sort((a, b) => {
-    const ai = MEAL_TYPE_ORDER[a.meal_type] ?? 99;
-    const bi = MEAL_TYPE_ORDER[b.meal_type] ?? 99;
-    return ai - bi;
-  });
+  return [...meals].sort(
+    (a, b) => mealTypeOrder(a.meal_type) - mealTypeOrder(b.meal_type)
+  );
 }
 
 function dayTotal(plan: PublishedPlan): number {
@@ -425,9 +403,8 @@ function MacroBar({
 }
 
 function MealCard({ meal }: { meal: Meal }) {
-  const typeKey = (meal.meal_type || "").toLowerCase();
-  const typeDe = MEAL_TYPE_DE[typeKey] || meal.meal_type;
-  const emoji = MEAL_TYPE_EMOJIS[typeKey] || "🍽️";
+  const typeDe = mealTypeLabelDe(meal.meal_type);
+  const emoji = mealTypeEmoji(meal.meal_type);
   const items = meal.items || [];
 
   return (
