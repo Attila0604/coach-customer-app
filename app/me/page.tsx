@@ -8,6 +8,7 @@ import {
   viennaNoonAnchor,
   viennaDow,
 } from "@/lib/date";
+import { mealTypeLabelDe } from "@/lib/meals";
 
 const SESSION_COOKIE = "coach_customer_id";
 
@@ -15,19 +16,6 @@ const DEFAULT_KCAL_GOAL = 2000;
 const DEFAULT_PROTEIN_G = 150;
 const DEFAULT_CARBS_G = 200;
 const DEFAULT_FAT_G = 65;
-
-const MEAL_TYPE_DE: Record<string, string> = {
-  breakfast: "Frühstück",
-  frühstück: "Frühstück",
-  fruehstueck: "Frühstück",
-  lunch: "Mittagessen",
-  mittag: "Mittag",
-  mittagessen: "Mittagessen",
-  dinner: "Abendessen",
-  abend: "Abend",
-  abendessen: "Abendessen",
-  snack: "Snack",
-};
 
 const FALLBACK_TIPPS = [
   "Trink heute deine 2 L Wasser — schon vor dem Frühstück.",
@@ -89,11 +77,7 @@ function formatMealLabel(
 ): string {
   const desc = raw_description || "Mahlzeit";
   if (!meal_type) return desc;
-  const typeKey = meal_type.toLowerCase();
-  const typeDe =
-    MEAL_TYPE_DE[typeKey] ||
-    meal_type.charAt(0).toUpperCase() + meal_type.slice(1).toLowerCase();
-  return `${typeDe}: ${desc}`;
+  return `${mealTypeLabelDe(meal_type)}: ${desc}`;
 }
 
 function startOfWeekMonday(date: Date): Date {
