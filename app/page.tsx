@@ -11,17 +11,14 @@ export default function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    console.log("🔵 handleSubmit FIRED, username:", username);
     setError(null);
 
     if (!username.trim()) {
-      console.log("🟡 username empty, abort");
       setError("Bitte Username eingeben");
       return;
     }
 
     setLoading(true);
-    console.log("🔵 fetching /api/auth/request-code...");
 
     try {
       const res = await fetch("/api/auth/request-code", {
@@ -30,21 +27,16 @@ export default function LoginPage() {
         body: JSON.stringify({ username: username.trim() }),
       });
 
-      console.log("🟢 response received, status:", res.status, "ok:", res.ok);
       const data = await res.json();
-      console.log("🟢 response data:", data);
 
       if (!res.ok) {
-        console.log("🔴 not ok");
         setError(data.error || "Fehler beim Senden");
         setLoading(false);
         return;
       }
 
-      console.log("✅ success, redirecting");
       router.push(`/login/verify?u=${encodeURIComponent(data.username)}`);
-    } catch (err) {
-      console.error("🔴 fetch threw:", err);
+    } catch {
       setError("Netzwerk-Fehler");
       setLoading(false);
     }
