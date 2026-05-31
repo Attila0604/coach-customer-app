@@ -5,9 +5,14 @@
 @layer base {
   html {
     -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
   body {
     background: #0F0E0C;
+    /* Native App-Feel: kein blaues Tap-Aufblitzen, kein Gummiband-Überscrollen */
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
   }
 }
 
@@ -91,6 +96,36 @@
   .animate-fade-in-up,
   .animate-flame,
   .animate-bar {
+    animation: none;
+  }
+}
+
+/* ==========================================================================
+   Native Tab-Leiste — Einblenden + Platz-Reservierung (Safe-Area)
+   ========================================================================== */
+
+@keyframes navIn {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* Leiste schiebt sich beim ersten Laden sanft von unten herein */
+.animate-nav-in {
+  animation: navIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Unterer Seiten-Abstand, damit Inhalt nicht hinter der festen Leiste liegt
+   (inkl. Home-Indikator-Bereich auf iPhones) */
+.pb-nav {
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-nav-in {
     animation: none;
   }
 }
