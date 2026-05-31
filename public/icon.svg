@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Coach">
+  <rect width="512" height="512" fill="#0F0E0C"/>
+  <g fill="#C9A961">
+    <!-- Mittelstange -->
+    <rect x="196" y="244" width="120" height="24" rx="12"/>
+    <!-- linke Gewichte -->
+    <rect x="168" y="222" width="22" height="68" rx="9"/>
+    <rect x="142" y="206" width="22" height="100" rx="10"/>
+    <!-- rechte Gewichte -->
+    <rect x="322" y="222" width="22" height="68" rx="9"/>
+    <rect x="348" y="206" width="22" height="100" rx="10"/>
+  </g>
+</svg>
