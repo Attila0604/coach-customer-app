@@ -402,6 +402,22 @@ export default async function TrainingPage() {
         </>
       )}
 
+      <section className="mb-10 border-t border-white/[0.08] pt-8">
+        <Link href="/me/training/history" className="block group">
+          <div className="flex justify-between items-baseline">
+            <p className="text-[11px] uppercase tracking-caps text-gold font-medium">
+              Verlauf
+            </p>
+            <span className="text-gold text-sm group-hover:translate-x-1 transition-transform inline-block">
+              →
+            </span>
+          </div>
+          <p className="text-sm text-bone-muted mt-2">
+            Vergangene Workouts ansehen
+          </p>
+        </Link>
+      </section>
+
       <footer className="border-t border-white/[0.08] pt-8 mt-4">
         <Link
           href="/me"
