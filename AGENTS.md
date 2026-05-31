@@ -67,11 +67,19 @@ Sprache durchgängig Deutsch.
   Check-in, Coach-Tipp/Nachricht, letzte Aktivität.
 - `app/me/nutrition/page.tsx` — Ernährungsplan (veröffentlichte `meal_plans`,
   14-Tage-Streifen).
+- `app/me/checkin/page.tsx` + `components/checkin/CheckinForm.tsx` — wöchentlicher
+  Check-in (Gewicht, Taille, Stimmung/Energie/Schlaf, Notiz); vorbefüllt aus dem
+  bestehenden `checkins`-Eintrag der Woche, alle Felder optional.
+- `app/me/progress/page.tsx` + `components/progress/WeightChart.tsx` — Fortschritt:
+  Kennzahlen + Gewichtsverlauf als serverseitig gerendertes Inline-SVG (keine
+  Chart-Bibliothek).
 - `app/me/training/page.tsx` — Trainingsplan, Wochenübersicht, heutiges Workout.
+- `app/me/training/history/page.tsx` — Verlauf abgeschlossener Workout-Sessions.
 - `app/me/training/session/[sessionId]/page.tsx` + `components/workout/WorkoutPlayer.tsx`
   — Workout-Player: Satz-Logging, Rest-Timer, Pause/Abbruch, PR-Erkennung,
   Abschluss-Statistik.
 - `components/workout/StartWorkoutButton.tsx` — startet/setzt Sessions fort.
+- Jede `/me`-Route hat ein `loading.tsx` (Skeleton, spiegelt das jeweilige Layout).
 
 ### Supabase-Clients (`lib/supabase/`)
 - `admin.ts` — Service-Role-Key (umgeht RLS, serverseitig). **Wird aktuell überall
@@ -79,9 +87,13 @@ Sprache durchgängig Deutsch.
   das eigene Cookie).
 - `server.ts` / `client.ts` — SSR-/Browser-Clients (vorbereitet, kaum genutzt).
 
-### Server Actions (`lib/actions/workout.ts`)
-Start/Resume, `logSet`, `deleteSetLog`, `completeWorkoutSession` (Volumen + PR),
-`abortWorkoutSession`, `pause`/`resume`, `getActiveSession`, `getRecentWorkoutSessions`.
+### Server Actions (`lib/actions/`)
+- `workout.ts` — Start/Resume, `logSet`, `deleteSetLog`, `completeWorkoutSession`
+  (Volumen + PR), `abortWorkoutSession`, `pause`/`resume`, `getActiveSession`,
+  `getRecentWorkoutSessions`.
+- `checkin.ts` — `saveCheckin(input: CheckinInput)`: legt den Wochen-Check-in an
+  bzw. aktualisiert ihn (Upsert auf `customer_id` + `week_of`).
+
 Jede Action prüft `customer_id` aus Cookie gegen Ownership.
 
 ### Env-Variablen
@@ -139,7 +151,6 @@ Tabellen und wer sie wie nutzt (B = coach-bot, A = coach-app, C = coach-customer
 
 ### Neue / verbleibende To-dos
 - `db/schema.reference.sql` durch echten `supabase db dump` ersetzen (autoritativ).
-- Optional: `package-lock.json` in `coach-customer-app` einchecken (reproduzierbare Builds).
 - `AGENTS.md` auch in `coach-bot` und `coach-app` anlegen (eigene Agenten je Repo).
 
 ---
