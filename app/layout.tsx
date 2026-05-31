@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter } from "next/font/google";
 import "./globals.css";
 
@@ -17,6 +17,24 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Coach — Mitglieder",
   description: "Dein persönlicher Bereich.",
+  manifest: "/manifest.webmanifest",
+  applicationName: "Coach",
+  appleWebApp: {
+    capable: true,
+    title: "Coach",
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0F0E0C",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
