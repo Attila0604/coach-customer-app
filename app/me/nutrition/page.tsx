@@ -175,7 +175,7 @@ export default async function NutritionPage({
       <AppHeader title="Ernährung" />
       <main className="min-h-screen px-6 pt-6 max-w-md mx-auto">
 
-      <section className="mb-10">
+      <section className="mb-10 text-center">
         <h1 className="font-serif text-4xl text-bone leading-tight mb-3 font-normal">
           Deine Woche
         </h1>
