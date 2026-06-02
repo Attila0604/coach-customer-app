@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
+import AppHeader from "@/components/nav/AppHeader";
 import { viennaDateKey } from "@/lib/date";
 import { mealTypeLabelDe, mealTypeEmoji, mealTypeOrder } from "@/lib/meals";
 
@@ -170,16 +171,9 @@ export default async function NutritionPage({
     : null;
 
   return (
-    <main className="min-h-screen px-6 py-12 max-w-md mx-auto">
-      <header className="mb-10">
-        <Link
-          href="/me"
-          className="inline-flex items-center gap-2 text-[11px] uppercase tracking-caps text-bone-faint hover:text-bone-muted transition-colors font-medium"
-        >
-          <span>←</span>
-          <span>Zurück</span>
-        </Link>
-      </header>
+    <>
+      <AppHeader title="Ernährung" />
+      <main className="min-h-screen px-6 pt-6 max-w-md mx-auto">
 
       <section className="mb-10">
         <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-3">
@@ -266,15 +260,8 @@ export default async function NutritionPage({
         </>
       )}
 
-      <footer className="mt-12 border-t border-white/[0.08] pt-8">
-        <Link
-          href="/me"
-          className="text-[11px] uppercase tracking-caps text-bone-faint hover:text-bone-muted transition-colors font-medium"
-        >
-          ← Zurück zum Dashboard
-        </Link>
-      </footer>
     </main>
+    </>
   );
 }
 
