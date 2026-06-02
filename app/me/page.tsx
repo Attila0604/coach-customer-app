@@ -311,7 +311,7 @@ export default async function MePage() {
   return (
     <main className="min-h-screen px-6 py-12 max-w-md mx-auto">
       <header className="mb-12">
-        <p className="font-serif text-base text-gold tracking-wide">Coach</p>
+        <img src="/logo.webp" alt="Rákosi Gym" className="w-14 h-14" />
       </header>
 
       <section className="mb-10 animate-fade-in-up">
