@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
+import AppHeader from "@/components/nav/AppHeader";
 
 const SESSION_COOKIE = "coach_customer_id";
 const TZ = "Europe/Vienna";
@@ -93,16 +94,9 @@ export default async function WorkoutHistoryPage() {
   }
 
   return (
-    <main className="min-h-screen px-6 py-12 max-w-md mx-auto">
-      <header className="mb-10">
-        <Link
-          href="/me/training"
-          className="inline-flex items-center gap-2 text-[11px] uppercase tracking-caps text-bone-faint hover:text-bone-muted transition-colors font-medium"
-        >
-          <span>←</span>
-          <span>Trainingsplan</span>
-        </Link>
-      </header>
+    <>
+      <AppHeader title="Verlauf" eyebrow="Training" />
+      <main className="min-h-screen px-6 pt-6 max-w-md mx-auto">
 
       <section className="mb-10">
         <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-3">
@@ -184,14 +178,7 @@ export default async function WorkoutHistoryPage() {
         ))
       )}
 
-      <footer className="border-t border-white/[0.08] pt-8 mt-4">
-        <Link
-          href="/me/training"
-          className="text-[11px] uppercase tracking-caps text-bone-faint hover:text-bone-muted transition-colors font-medium"
-        >
-          ← Zurück zum Trainingsplan
-        </Link>
-      </footer>
     </main>
+    </>
   );
 }
