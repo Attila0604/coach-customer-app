@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
+import AppHeader from "@/components/nav/AppHeader";
 import { viennaMondayKey } from "@/lib/date";
 import CheckinForm from "@/components/checkin/CheckinForm";
 import type { CheckinInput } from "@/lib/actions/checkin";
@@ -45,16 +45,9 @@ export default async function CheckinPage() {
   };
 
   return (
-    <main className="min-h-screen px-6 py-12 max-w-md mx-auto">
-      <header className="mb-10">
-        <Link
-          href="/me"
-          className="inline-flex items-center gap-2 text-[11px] uppercase tracking-caps text-bone-faint hover:text-bone-muted transition-colors font-medium"
-        >
-          <span>←</span>
-          <span>Zurück</span>
-        </Link>
-      </header>
+    <>
+      <AppHeader title="Check-in" eyebrow="Wöchentlich" />
+      <main className="min-h-screen px-6 pt-6 max-w-md mx-auto">
 
       <section className="mb-10">
         <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-3">
@@ -72,5 +65,6 @@ export default async function CheckinPage() {
         <CheckinForm initial={initial} alreadyCheckedIn={!!existing} />
       </section>
     </main>
+    </>
   );
 }
