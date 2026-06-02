@@ -9,7 +9,7 @@
     text-size-adjust: 100%;
   }
   body {
-    background: #0F0E0C;
+    background: #10151D;
     /* Native App-Feel: kein blaues Tap-Aufblitzen, kein Gummiband-Überscrollen */
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior-y: none;
