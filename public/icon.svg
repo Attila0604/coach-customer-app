@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Coach">
-  <rect width="512" height="512" fill="#0F0E0C"/>
-  <g fill="#C9A961">
+  <rect width="512" height="512" fill="#10151D"/>
+  <g fill="#C9D2DB">
     <!-- Mittelstange -->
     <rect x="196" y="244" width="120" height="24" rx="12"/>
     <!-- linke Gewichte -->
