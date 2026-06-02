@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
+import AppHeader from "@/components/nav/AppHeader";
 import WeightChart, { type WeightPoint } from "@/components/progress/WeightChart";
 
 const SESSION_COOKIE = "coach_customer_id";
@@ -78,16 +79,9 @@ export default async function ProgressPage() {
       lastCheckin.sleep_rating != null);
 
   return (
-    <main className="min-h-screen px-6 py-12 max-w-md mx-auto">
-      <header className="mb-10">
-        <Link
-          href="/me"
-          className="inline-flex items-center gap-2 text-[11px] uppercase tracking-caps text-bone-faint hover:text-bone-muted transition-colors font-medium"
-        >
-          <span>←</span>
-          <span>Zurück</span>
-        </Link>
-      </header>
+    <>
+      <AppHeader title="Fortschritt" />
+      <main className="min-h-screen px-6 pt-6 max-w-md mx-auto">
 
       <section className="mb-10">
         <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-3">
@@ -181,6 +175,7 @@ export default async function ProgressPage() {
         </Link>
       </footer>
     </main>
+    </>
   );
 }
 
