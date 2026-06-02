@@ -61,8 +61,8 @@ export default function WeightChart({
     >
       <defs>
         <linearGradient id="weightArea" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#C9A961" stopOpacity="0.22" />
-          <stop offset="100%" stopColor="#C9A961" stopOpacity="0" />
+          <stop offset="0%" stopColor="#8FAAC6" stopOpacity="0.22" />
+          <stop offset="100%" stopColor="#8FAAC6" stopOpacity="0" />
         </linearGradient>
       </defs>
 
@@ -74,7 +74,7 @@ export default function WeightChart({
             y1={targetY}
             x2={W - PAD_X}
             y2={targetY}
-            stroke="#6B6760"
+            stroke="#5E6B7A"
             strokeWidth="1"
             strokeDasharray="3 3"
           />
@@ -97,7 +97,7 @@ export default function WeightChart({
       <polyline
         points={linePoints}
         fill="none"
-        stroke="#C9A961"
+        stroke="#8FAAC6"
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -110,8 +110,8 @@ export default function WeightChart({
           cx={x(i)}
           cy={y(p.value)}
           r={i === n - 1 ? 3.5 : 2.5}
-          fill={i === n - 1 ? "#C9A961" : "#0F0E0C"}
-          stroke="#C9A961"
+          fill={i === n - 1 ? "#8FAAC6" : "#10151D"}
+          stroke="#8FAAC6"
           strokeWidth="1.5"
         />
       ))}
