@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
+import AppHeader from "@/components/nav/AppHeader";
 import StartWorkoutButton from "@/components/workout/StartWorkoutButton";
 import { viennaDow } from "@/lib/date";
 
@@ -126,17 +127,9 @@ export default async function TrainingPage() {
   );
 
   return (
-    <main className="min-h-screen px-6 py-12 max-w-md mx-auto">
-      <Link
-        href="/me"
-        className="text-[11px] uppercase tracking-caps text-bone-faint hover:text-bone-muted transition-colors mb-8 inline-block"
-      >
-        ← Member-Bereich
-      </Link>
-
-      <header className="mb-12">
-        <p className="font-serif text-base text-gold tracking-wide">Coach</p>
-      </header>
+    <>
+      <AppHeader title="Training" />
+      <main className="min-h-screen px-6 pt-6 max-w-md mx-auto">
 
       {/* RESUME-BANNER wenn aktive Session */}
       {activeSession && (
@@ -418,14 +411,7 @@ export default async function TrainingPage() {
         </Link>
       </section>
 
-      <footer className="border-t border-white/[0.08] pt-8 mt-4">
-        <Link
-          href="/me"
-          className="text-[11px] uppercase tracking-caps text-bone-faint hover:text-bone-muted transition-colors font-medium"
-        >
-          ← Zurück zum Member-Bereich
-        </Link>
-      </footer>
     </main>
+    </>
   );
 }
