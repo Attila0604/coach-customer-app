@@ -49,7 +49,7 @@ export default async function CheckinPage() {
       <AppHeader title="Check-in" eyebrow="Wöchentlich" />
       <main className="min-h-screen px-6 pt-6 max-w-md mx-auto">
 
-      <section className="mb-10">
+      <section className="mb-10 text-center">
         <h1 className="font-serif text-4xl text-bone leading-tight mb-3 font-normal">
           Wie war deine Woche?
         </h1>
