@@ -10,7 +10,7 @@ type AppHeaderProps = {
 export default function AppHeader({ title, eyebrow }: AppHeaderProps) {
   return (
     <header className="sticky top-0 z-40 bg-ink-900/80 backdrop-blur-xl border-b border-white/[0.08] pt-[env(safe-area-inset-top)]">
-      <div className="max-w-md mx-auto px-6 py-3.5">
+      <div className="max-w-md mx-auto px-6 py-3.5 text-center">
         {eyebrow && (
           <p className="text-[10px] uppercase tracking-caps text-gold font-medium mb-0.5">
             {eyebrow}
