@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Inter } from "next/font/google";
+import { Oswald, Inter } from "next/font/google";
 import "./globals.css";
 
-const fraunces = Fraunces({
+const oswald = Oswald({
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-serif",
   display: "swap",
 });
@@ -15,13 +16,13 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Coach — Mitglieder",
+  title: "RGYM — Mitglieder",
   description: "Dein persönlicher Bereich.",
   manifest: "/manifest.webmanifest",
-  applicationName: "Coach",
+  applicationName: "RGYM",
   appleWebApp: {
     capable: true,
-    title: "Coach",
+    title: "RGYM",
     statusBarStyle: "black-translucent",
   },
   icons: {
@@ -31,7 +32,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0F0E0C",
+  themeColor: "#10151D",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -43,7 +44,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="de" className={`${fraunces.variable} ${inter.variable}`}>
+    <html lang="de" className={`${oswald.variable} ${inter.variable}`}>
       <body className="bg-ink-900 text-bone font-sans antialiased">
         {children}
       </body>
