@@ -45,9 +45,7 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-sm">
-        <p className="font-serif text-base text-gold mb-12 tracking-wide">
-          Coach
-        </p>
+        <img src="/logo.webp" alt="Rákosi Gym" className="w-32 h-32 mb-10" />
 
         <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-3">
           Mitglieder
