@@ -310,11 +310,11 @@ export default async function MePage() {
 
   return (
     <main className="min-h-screen px-6 py-12 max-w-md mx-auto">
-      <header className="mb-12">
-        <img src="/logo.webp" alt="Rákosi Gym" className="w-14 h-14" />
+      <header className="mb-8 flex justify-center">
+        <img src="/logo.webp" alt="Rákosi Gym" className="w-20 h-20" />
       </header>
 
-      <section className="mb-10 animate-fade-in-up">
+      <section className="mb-10 animate-fade-in-up text-center">
         <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-3">
           Eingeloggt
         </p>
