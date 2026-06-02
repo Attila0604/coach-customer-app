@@ -176,9 +176,6 @@ export default async function NutritionPage({
       <main className="min-h-screen px-6 pt-6 max-w-md mx-auto">
 
       <section className="mb-10">
-        <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-3">
-          Ernährungsplan
-        </p>
         <h1 className="font-serif text-4xl text-bone leading-tight mb-3 font-normal">
           Deine Woche
         </h1>
