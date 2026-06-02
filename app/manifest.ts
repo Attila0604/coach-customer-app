@@ -2,15 +2,15 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Coach — Mitglieder",
-    short_name: "Coach",
+    name: "Rákosi Gym — Mitglieder",
+    short_name: "RGYM",
     description: "Dein persönlicher Coaching-Bereich.",
     start_url: "/me",
     scope: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#0F0E0C",
-    theme_color: "#0F0E0C",
+    background_color: "#10151D",
+    theme_color: "#10151D",
     lang: "de",
     icons: [
       {
