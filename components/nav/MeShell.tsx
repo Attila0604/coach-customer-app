@@ -6,11 +6,14 @@
 
 import { usePathname } from "next/navigation";
 import BottomNav from "@/components/nav/BottomNav";
+import type { Locale } from "@/lib/i18n";
 
 export default function MeShell({
   children,
+  locale,
 }: {
   children: React.ReactNode;
+  locale: Locale;
 }) {
   const pathname = usePathname() ?? "";
   const immersive = pathname.startsWith("/me/training/session/");
@@ -18,7 +21,7 @@ export default function MeShell({
   return (
     <>
       <div className={immersive ? undefined : "pb-nav"}>{children}</div>
-      {!immersive && <BottomNav />}
+      {!immersive && <BottomNav locale={locale} />}
     </>
   );
 }
