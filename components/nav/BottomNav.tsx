@@ -9,10 +9,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { getDict, type Locale } from "@/lib/i18n";
 
 type Tab = {
   href: string;
-  label: string;
+  labelKey: "start" | "training" | "nutrition" | "progress" | "checkin";
   isActive: (path: string) => boolean;
   icon: React.ReactNode;
 };
@@ -28,7 +29,7 @@ const stroke = {
 const TABS: Tab[] = [
   {
     href: "/me",
-    label: "Start",
+    labelKey: "start",
     isActive: (p) => p === "/me",
     icon: (
       <svg viewBox="0 0 24 24" className="w-[22px] h-[22px]" {...stroke}>
@@ -39,7 +40,7 @@ const TABS: Tab[] = [
   },
   {
     href: "/me/training",
-    label: "Training",
+    labelKey: "training",
     isActive: (p) => p.startsWith("/me/training"),
     icon: (
       <svg viewBox="0 0 24 24" className="w-[22px] h-[22px]" {...stroke}>
@@ -49,7 +50,7 @@ const TABS: Tab[] = [
   },
   {
     href: "/me/nutrition",
-    label: "Ernährung",
+    labelKey: "nutrition",
     isActive: (p) => p.startsWith("/me/nutrition"),
     icon: (
       <svg viewBox="0 0 24 24" className="w-[22px] h-[22px]" {...stroke}>
@@ -60,7 +61,7 @@ const TABS: Tab[] = [
   },
   {
     href: "/me/progress",
-    label: "Fortschritt",
+    labelKey: "progress",
     isActive: (p) => p.startsWith("/me/progress"),
     icon: (
       <svg viewBox="0 0 24 24" className="w-[22px] h-[22px]" {...stroke}>
@@ -71,7 +72,7 @@ const TABS: Tab[] = [
   },
   {
     href: "/me/checkin",
-    label: "Check-in",
+    labelKey: "checkin",
     isActive: (p) => p.startsWith("/me/checkin"),
     icon: (
       <svg viewBox="0 0 24 24" className="w-[22px] h-[22px]" {...stroke}>
@@ -83,8 +84,9 @@ const TABS: Tab[] = [
   },
 ];
 
-export default function BottomNav() {
+export default function BottomNav({ locale }: { locale: Locale }) {
   const pathname = usePathname() ?? "";
+  const d = getDict(locale);
 
   return (
     <nav
@@ -109,7 +111,7 @@ export default function BottomNav() {
                 >
                   {tab.icon}
                   <span className="text-[10px] leading-none tracking-wide">
-                    {tab.label}
+                    {d.nav[tab.labelKey]}
                   </span>
                 </Link>
               </li>
