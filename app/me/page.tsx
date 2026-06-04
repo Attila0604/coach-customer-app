@@ -9,6 +9,8 @@ import {
   viennaDow,
 } from "@/lib/date";
 import { mealTypeLabelDe } from "@/lib/meals";
+import { resolveLocale } from "@/lib/i18n";
+import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
 
 const SESSION_COOKIE = "coach_customer_id";
 
@@ -169,7 +171,7 @@ export default async function MePage() {
   const { data: profile } = await admin
     .from("customer_profiles")
     .select(
-      "daily_kcal_target, protein_target_g, carbs_target_g, fat_target_g, weight_target_kg"
+      "daily_kcal_target, protein_target_g, carbs_target_g, fat_target_g, weight_target_kg, language"
     )
     .eq("customer_id", customerId)
     .maybeSingle();
@@ -179,6 +181,7 @@ export default async function MePage() {
   const carbsGoal = profile?.carbs_target_g || DEFAULT_CARBS_G;
   const fatGoal = profile?.fat_target_g || DEFAULT_FAT_G;
   const weightTarget = profile?.weight_target_kg || null;
+  const locale = resolveLocale(profile?.language as string | null | undefined);
 
   const now = new Date();
   const nowIso = now.toISOString();
@@ -310,8 +313,9 @@ export default async function MePage() {
 
   return (
     <main className="min-h-screen px-6 py-12 max-w-md mx-auto">
-      <header className="mb-8 flex justify-center">
+      <header className="mb-8 flex flex-col items-center gap-4">
         <img src="/logo.webp" alt="Rákosi Gym" className="w-20 h-20" />
+        <LanguageSwitcher current={locale} />
       </header>
 
       <section className="mb-10 animate-fade-in-up text-center">
