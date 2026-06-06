@@ -9,7 +9,7 @@ import {
   viennaDow,
 } from "@/lib/date";
 import { mealTypeLabelDe } from "@/lib/meals";
-import { resolveLocale } from "@/lib/i18n";
+import { getDict, resolveLocale, type Locale } from "@/lib/i18n";
 import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
 
 const SESSION_COOKIE = "coach_customer_id";
@@ -19,54 +19,52 @@ const DEFAULT_PROTEIN_G = 150;
 const DEFAULT_CARBS_G = 200;
 const DEFAULT_FAT_G = 65;
 
-const FALLBACK_TIPPS = [
-  "Trink heute deine 2 L Wasser — schon vor dem Frühstück.",
-  "Eiweiß zu jeder Mahlzeit — dein Körper dankt's dir.",
-  "10 Minuten Bewegung sind besser als 0. Auch heute.",
-  "Smartphone weg beim Essen. Spür wie's schmeckt.",
-  "Schlaf ist genauso wichtig wie Training. Heute vor 23 Uhr ins Bett?",
-  "Konsistenz schlägt Perfektion. Einfach weiter loggen.",
-  "Lob dich heute. Dranbleiben ist die halbe Miete.",
-  "Plan deine Mahlzeiten — morgen schon vorbereiten.",
-];
+const LOCALE_TAG: Record<Locale, string> = {
+  de: "de-DE",
+  it: "it-IT",
+  hu: "hu-HU",
+};
 
-function greetingDe(date: Date): string {
+function greeting(date: Date, locale: Locale): string {
+  const g = getDict(locale).home.greeting;
   const hour = date.getHours();
-  if (hour >= 5 && hour < 11) return "Guten Morgen";
-  if (hour >= 11 && hour < 17) return "Hallo";
-  if (hour >= 17 && hour < 22) return "Guten Abend";
-  return "Servus";
+  if (hour >= 5 && hour < 11) return g.morning;
+  if (hour >= 11 && hour < 17) return g.day;
+  if (hour >= 17 && hour < 22) return g.evening;
+  return g.night;
 }
 
-function motivationalSubtitleDe(date: Date): string {
+function motivationalSubtitle(date: Date, locale: Locale): string {
+  const sub = getDict(locale).home.subtitle;
   const hour = date.getHours();
-  if (hour >= 5 && hour < 11) return "Bereit für einen starken Tag?";
-  if (hour >= 11 && hour < 14) return "Halbzeit — bleib dran.";
-  if (hour >= 14 && hour < 18) return "Du machst das gut. Weiter so.";
-  if (hour >= 18 && hour < 22) return "Schöner Abend.";
-  return "Ruhe dich gut aus.";
+  if (hour >= 5 && hour < 11) return sub.morning;
+  if (hour >= 11 && hour < 14) return sub.midday;
+  if (hour >= 14 && hour < 18) return sub.afternoon;
+  if (hour >= 18 && hour < 22) return sub.evening;
+  return sub.night;
 }
 
-function timeAgoDe(iso: string): string {
+function timeAgo(iso: string, locale: Locale): string {
+  const t = getDict(locale).home.timeAgo;
   const date = new Date(iso);
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 60) return "gerade eben";
+  if (seconds < 60) return t.now;
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `vor ${minutes} Min`;
+  if (minutes < 60) return t.min.replace("{n}", String(minutes));
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `vor ${hours}h`;
+  if (hours < 24) return t.hour.replace("{n}", String(hours));
   const days = Math.floor(hours / 24);
-  if (days === 1) return "gestern";
-  if (days < 7) return `vor ${days} Tagen`;
-  return date.toLocaleDateString("de-DE", {
+  if (days === 1) return t.yesterday;
+  if (days < 7) return t.days.replace("{n}", String(days));
+  return date.toLocaleDateString(LOCALE_TAG[locale], {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   });
 }
 
-function formatDateDe(date: Date): string {
-  return date.toLocaleDateString("de-DE", {
+function formatDate(date: Date, locale: Locale): string {
+  return date.toLocaleDateString(LOCALE_TAG[locale], {
     weekday: "long",
     day: "2-digit",
     month: "long",
@@ -75,9 +73,10 @@ function formatDateDe(date: Date): string {
 
 function formatMealLabel(
   meal_type: string | null,
-  raw_description: string | null
+  raw_description: string | null,
+  locale: Locale
 ): string {
-  const desc = raw_description || "Mahlzeit";
+  const desc = raw_description || getDict(locale).home.mealDefault;
   if (!meal_type) return desc;
   return `${mealTypeLabelDe(meal_type)}: ${desc}`;
 }
@@ -115,9 +114,10 @@ type WeekDay = {
 function buildWeekData(
   today: Date,
   dailyKcals: Map<string, number>,
-  kcalGoal: number
+  kcalGoal: number,
+  weekdays: string[]
 ): WeekDay[] {
-  const labels = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+  const labels = weekdays;
   const weekStart = startOfWeekMonday(today);
   const todayKey = dateKey(today);
   const result: WeekDay[] = [];
@@ -135,11 +135,12 @@ function buildWeekData(
   return result;
 }
 
-function pickFallbackTip(date: Date): string {
+function pickFallbackTip(date: Date, locale: Locale): string {
+  const tips = getDict(locale).home.tips;
   const dayOfYear = Math.floor(
     (date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 86400000
   );
-  return FALLBACK_TIPPS[dayOfYear % FALLBACK_TIPPS.length];
+  return tips[dayOfYear % tips.length];
 }
 
 type MacroRow = {
@@ -182,6 +183,7 @@ export default async function MePage() {
   const fatGoal = profile?.fat_target_g || DEFAULT_FAT_G;
   const weightTarget = profile?.weight_target_kg || null;
   const locale = resolveLocale(profile?.language as string | null | undefined);
+  const d = getDict(locale);
 
   const now = new Date();
   const nowIso = now.toISOString();
@@ -218,7 +220,7 @@ export default async function MePage() {
     if (globalNote?.content) coachNote = globalNote.content;
   }
 
-  const dailyTip = coachNote || pickFallbackTip(now);
+  const dailyTip = coachNote || pickFallbackTip(now, locale);
   const isRealNote = !!coachNote;
 
   const { data: lastCheckin } = await admin
@@ -263,7 +265,7 @@ export default async function MePage() {
   });
 
   const streak = calculateStreak(loggedDates);
-  const weekData = buildWeekData(now, dailyKcals, kcalGoal);
+  const weekData = buildWeekData(now, dailyKcals, kcalGoal, d.home.weekdays);
 
   const { data: recentLogs } = await admin
     .from("food_logs")
@@ -305,10 +307,10 @@ export default async function MePage() {
   }
 
   const macros: MacroRow[] = [
-    { label: "Kalorien", value: todayTotals.kcal, target: kcalGoal, unit: "kcal" },
-    { label: "Protein", value: todayTotals.protein, target: proteinGoal, unit: "g" },
-    { label: "Carbs", value: todayTotals.carbs, target: carbsGoal, unit: "g" },
-    { label: "Fat", value: todayTotals.fat, target: fatGoal, unit: "g" },
+    { label: d.home.macros.calories, value: todayTotals.kcal, target: kcalGoal, unit: "kcal" },
+    { label: d.home.macros.protein, value: todayTotals.protein, target: proteinGoal, unit: "g" },
+    { label: d.home.macros.carbs, value: todayTotals.carbs, target: carbsGoal, unit: "g" },
+    { label: d.home.macros.fat, value: todayTotals.fat, target: fatGoal, unit: "g" },
   ];
 
   return (
@@ -320,31 +322,31 @@ export default async function MePage() {
 
       <section className="mb-10 animate-fade-in-up text-center">
         <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-3">
-          Eingeloggt
+          {d.home.loggedIn}
         </p>
         <h1 className="font-serif text-4xl text-bone leading-tight mb-3 font-normal">
-          {greetingDe(now)}, {firstName}.
+          {greeting(now, locale)}, {firstName}.
         </h1>
         <p className="text-sm text-bone-muted leading-relaxed mb-3">
-          {formatDateDe(now)}
+          {formatDate(now, locale)}
           {streak > 0 && (
             <>
               <span className="mx-2 text-bone-faint">·</span>
               <span className="text-gold">
                 <span className="animate-flame">🔥</span> {streak}{" "}
-                {streak === 1 ? "Tag" : "Tage"} Streak
+                {streak === 1 ? d.home.dayOne : d.home.dayMany}{" "}{d.home.streakWord}
               </span>
             </>
           )}
         </p>
         <p className="text-sm text-bone-faint italic leading-relaxed">
-          {motivationalSubtitleDe(now)}
+          {motivationalSubtitle(now, locale)}
         </p>
       </section>
 
       <section className="mb-10 border-t border-white/[0.08] pt-8">
         <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-5">
-          Diese Woche
+          {d.home.thisWeek}
         </p>
         <div className="flex items-end justify-between gap-2 h-20">
           {weekData.map((day, idx) => (
@@ -380,17 +382,17 @@ export default async function MePage() {
 
       <section className="mb-10 border-t border-white/[0.08] pt-8">
         <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-5">
-          Heute
+          {d.home.today}
         </p>
         <div className="space-y-5">
           <div className="flex justify-between items-baseline gap-3">
             <span className="text-sm text-bone-muted flex-shrink-0">
-              Letzter Check-in
+              {d.home.lastCheckin}
             </span>
             <span className="text-sm text-bone font-medium text-right">
               {lastCheckin ? (
                 <>
-                  {timeAgoDe(lastCheckin.created_at)}
+                  {timeAgo(lastCheckin.created_at, locale)}
                   {lastCheckin.weight_kg && (
                     <span className="text-bone-muted">
                       {" · "}
@@ -424,10 +426,10 @@ export default async function MePage() {
                   <div className="flex justify-between items-baseline mb-1.5">
                     <span className="text-sm text-bone-muted">{m.label}</span>
                     <span className="text-sm text-bone font-medium tabular-nums">
-                      {Math.round(m.value).toLocaleString("de-DE")}
+                      {Math.round(m.value).toLocaleString(LOCALE_TAG[locale])}
                       <span className="text-bone-faint">
                         {" / "}
-                        {m.target.toLocaleString("de-DE")} {m.unit}
+                        {m.target.toLocaleString(LOCALE_TAG[locale])} {m.unit}
                       </span>
                     </span>
                   </div>
@@ -449,7 +451,7 @@ export default async function MePage() {
         <Link href="/me/nutrition" className="block group">
           <div className="flex justify-between items-baseline">
             <p className="text-[11px] uppercase tracking-caps text-gold font-medium">
-              Ernährungsplan
+              {d.home.nutritionPlan}
             </p>
             <span className="text-gold text-sm group-hover:translate-x-1 transition-transform inline-block">
               →
@@ -458,13 +460,13 @@ export default async function MePage() {
           <p className="text-sm text-bone-muted mt-2">
             {todayPlan
               ? `${todayPlan.meals.length} ${
-                  todayPlan.meals.length === 1 ? "Mahlzeit" : "Mahlzeiten"
-                } heute · ${Math.round(todayPlan.kcal).toLocaleString(
-                  "de-DE"
+                  todayPlan.meals.length === 1 ? d.home.mealOne : d.home.mealMany
+                } ${d.home.todayLower} · ${Math.round(todayPlan.kcal).toLocaleString(
+                  LOCALE_TAG[locale]
                 )} kcal`
               : hasUpcomingPlan
-              ? "Plan für die kommenden Tage ansehen"
-              : "Noch kein Plan veröffentlicht"}
+              ? d.home.planUpcoming
+              : d.home.planNone}
           </p>
         </Link>
       </section>
@@ -473,14 +475,14 @@ export default async function MePage() {
         <Link href="/me/training" className="block group">
           <div className="flex justify-between items-baseline">
             <p className="text-[11px] uppercase tracking-caps text-gold font-medium">
-              Trainingsplan
+              {d.home.trainingPlan}
             </p>
             <span className="text-gold text-sm group-hover:translate-x-1 transition-transform inline-block">
               →
             </span>
           </div>
           <p className="text-sm text-bone-muted mt-2">
-            Übersicht & heutiges Workout
+            {d.home.trainingSub}
           </p>
         </Link>
       </section>
@@ -489,7 +491,7 @@ export default async function MePage() {
         <Link href="/me/checkin" className="block group">
           <div className="flex justify-between items-baseline">
             <p className="text-[11px] uppercase tracking-caps text-gold font-medium">
-              Check-in
+              {d.home.checkin}
             </p>
             <span className="text-gold text-sm group-hover:translate-x-1 transition-transform inline-block">
               →
@@ -497,8 +499,8 @@ export default async function MePage() {
           </div>
           <p className="text-sm text-bone-muted mt-2">
             {lastCheckin
-              ? `Zuletzt ${timeAgoDe(lastCheckin.created_at)} · aktualisieren`
-              : "Gewicht & Befinden dieser Woche eintragen"}
+              ? `${d.home.checkinLastPrefix} ${timeAgo(lastCheckin.created_at, locale)} · ${d.home.checkinUpdate}`
+              : d.home.checkinEmpty}
           </p>
         </Link>
       </section>
@@ -507,21 +509,21 @@ export default async function MePage() {
         <Link href="/me/progress" className="block group">
           <div className="flex justify-between items-baseline">
             <p className="text-[11px] uppercase tracking-caps text-gold font-medium">
-              Fortschritt
+              {d.home.progress}
             </p>
             <span className="text-gold text-sm group-hover:translate-x-1 transition-transform inline-block">
               →
             </span>
           </div>
           <p className="text-sm text-bone-muted mt-2">
-            Gewichtsverlauf & Befinden
+            {d.home.progressSub}
           </p>
         </Link>
       </section>
 
       <section className="mb-10 border-t border-white/[0.08] pt-8">
         <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-4">
-          {isRealNote ? "Nachricht vom Coach" : "Coach's Tipp"}
+          {isRealNote ? d.home.coachMessage : d.home.coachTip}
         </p>
         <blockquote className="border-l-2 border-gold/40 pl-4">
           <p className="font-serif text-base text-bone italic leading-relaxed mb-2">
@@ -535,7 +537,7 @@ export default async function MePage() {
 
       <section className="mb-12 border-t border-white/[0.08] pt-8">
         <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-5">
-          Aktivität
+          {d.home.activity}
         </p>
         {logs.length > 0 ? (
           <ul className="space-y-4">
@@ -546,10 +548,10 @@ export default async function MePage() {
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-sm text-bone truncate">
-                    {formatMealLabel(log.meal_type, log.raw_description)}
+                    {formatMealLabel(log.meal_type, log.raw_description, locale)}
                   </p>
                   <p className="text-[11px] text-bone-faint mt-0.5">
-                    {timeAgoDe(log.logged_at)}
+                    {timeAgo(log.logged_at, locale)}
                   </p>
                 </div>
                 {log.total_kcal != null && (
@@ -562,7 +564,7 @@ export default async function MePage() {
           </ul>
         ) : (
           <p className="text-sm text-bone-faint italic">
-            Noch keine Einträge. Logge im Telegram-Bot.
+            {d.home.activityEmpty}
           </p>
         )}
       </section>
@@ -573,11 +575,11 @@ export default async function MePage() {
             type="submit"
             className="text-[11px] uppercase tracking-caps text-bone-faint hover:text-bone-muted transition-colors font-medium"
           >
-            Abmelden
+            {d.home.logout}
           </button>
         </form>
         <p className="text-[11px] text-bone-faint mt-5">
-          Eingeloggt als @{telegramUsername}
+          {d.home.loggedInAs} @{telegramUsername}
         </p>
       </footer>
     </main>
