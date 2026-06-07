@@ -11,6 +11,12 @@ export type { Dict };
 export const LOCALES: Locale[] = ["de", "it", "hu"];
 export const DEFAULT_LOCALE: Locale = "de";
 
+export const LOCALE_TAG: Record<Locale, string> = {
+  de: "de-DE",
+  it: "it-IT",
+  hu: "hu-HU",
+};
+
 const dicts: Record<Locale, Dict> = { de, it, hu };
 
 export function getDict(locale: Locale): Dict {
