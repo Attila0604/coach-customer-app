@@ -135,4 +135,15 @@ export const hu: Dict = {
     startWorkout: "▶ Edzés indítása",
     startDay: "▶ Nap indítása",
   },
+  history: {
+    heading: "Az edzéseid",
+    none: "Még nincs befejezett edzés.",
+    completed: "{n} befejezve",
+    aborted: "· {n} megszakítva",
+    emptyBody: "Amint elkezdesz és befejezel egy edzést, itt megjelenik. 💪",
+    workoutFallback: "Edzés",
+    setOne: "sorozat",
+    setMany: "sorozat",
+    abortedBadge: "megszakítva",
+  },
 };
