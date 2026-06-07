@@ -136,6 +136,17 @@ export const de = {
     startWorkout: "▶ Training starten",
     startDay: "▶ Diesen Tag starten",
   },
+  history: {
+    heading: "Deine Workouts",
+    none: "Noch keine abgeschlossenen Workouts.",
+    completed: "{n} abgeschlossen",
+    aborted: "· {n} abgebrochen",
+    emptyBody: "Sobald du ein Training startest und abschließt, erscheint es hier. 💪",
+    workoutFallback: "Workout",
+    setOne: "Satz",
+    setMany: "Sätze",
+    abortedBadge: "abgebrochen",
+  },
 };
 
 export type Dict = typeof de;
