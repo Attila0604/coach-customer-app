@@ -8,7 +8,7 @@ import {
   viennaNoonAnchor,
   viennaDow,
 } from "@/lib/date";
-import { mealTypeLabelDe } from "@/lib/meals";
+import { mealTypeLabel } from "@/lib/meals";
 import { getDict, resolveLocale, type Locale } from "@/lib/i18n";
 import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
 
@@ -78,7 +78,7 @@ function formatMealLabel(
 ): string {
   const desc = raw_description || getDict(locale).home.mealDefault;
   if (!meal_type) return desc;
-  return `${mealTypeLabelDe(meal_type)}: ${desc}`;
+  return `${mealTypeLabel(meal_type, locale)}: ${desc}`;
 }
 
 function startOfWeekMonday(date: Date): Date {
