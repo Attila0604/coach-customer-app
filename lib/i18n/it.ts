@@ -96,4 +96,18 @@ export const it: Dict = {
     errWeight: "Il peso deve essere un numero.",
     errWaist: "La vita deve essere un numero.",
   },
+  progress: {
+    title: "Progressi",
+    heading: "Il tuo andamento",
+    subtitle: "Basato sui tuoi check-in settimanali.",
+    emptyText: "Ancora nessun dato di peso. Dopo il tuo primo check-in qui apparirà il tuo andamento. 📈",
+    start: "Inizio",
+    current: "Attuale",
+    target: "Obiettivo",
+    changeSince: "Variazione dall'inizio:",
+    weightTrend: "Andamento del peso",
+    needTwo: "Dal secondo check-in con peso vedrai qui il tuo andamento.",
+    lastWellbeing: "Benessere recente",
+    newCheckin: "+ Nuovo check-in",
+  },
 };
