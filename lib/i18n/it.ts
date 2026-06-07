@@ -135,4 +135,15 @@ export const it: Dict = {
     startWorkout: "▶ Avvia allenamento",
     startDay: "▶ Avvia questo giorno",
   },
+  history: {
+    heading: "I tuoi allenamenti",
+    none: "Ancora nessun allenamento completato.",
+    completed: "{n} completati",
+    aborted: "· {n} interrotti",
+    emptyBody: "Quando inizi e completi un allenamento, apparirà qui. 💪",
+    workoutFallback: "Allenamento",
+    setOne: "serie",
+    setMany: "serie",
+    abortedBadge: "interrotto",
+  },
 };
