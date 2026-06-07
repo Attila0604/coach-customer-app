@@ -97,6 +97,20 @@ export const de = {
     errWeight: "Gewicht muss eine Zahl sein.",
     errWaist: "Taille muss eine Zahl sein.",
   },
+  progress: {
+    title: "Fortschritt",
+    heading: "Dein Verlauf",
+    subtitle: "Basierend auf deinen wöchentlichen Check-ins.",
+    emptyText: "Noch keine Gewichtsdaten. Nach deinem ersten Check-in erscheint hier dein Verlauf. 📈",
+    start: "Start",
+    current: "Aktuell",
+    target: "Ziel",
+    changeSince: "Veränderung seit Start:",
+    weightTrend: "Gewichtsverlauf",
+    needTwo: "Ab dem zweiten Check-in mit Gewicht siehst du hier deinen Verlauf.",
+    lastWellbeing: "Befinden zuletzt",
+    newCheckin: "+ Neuer Check-in",
+  },
 };
 
 export type Dict = typeof de;
