@@ -1,6 +1,8 @@
 // Schlankes Gewichts-Liniendiagramm als Inline-SVG — serverseitig gerendert,
 // keine Chart-Bibliothek. Skaliert automatisch auf den Wertebereich (inkl. Ziel).
 
+import { getDict, type Locale } from "@/lib/i18n";
+
 export type WeightPoint = { label: string; value: number };
 
 const W = 320;
@@ -12,10 +14,13 @@ const PAD_BOTTOM = 22;
 export default function WeightChart({
   points,
   target,
+  locale,
 }: {
   points: WeightPoint[];
   target?: number | null;
+  locale: Locale;
 }) {
+  const d = getDict(locale).progress;
   if (points.length < 2) return null;
 
   const values = points.map((p) => p.value);
@@ -56,7 +61,7 @@ export default function WeightChart({
       viewBox={`0 0 ${W} ${H}`}
       width="100%"
       role="img"
-      aria-label="Gewichtsverlauf"
+      aria-label={d.weightTrend}
       className="overflow-visible"
     >
       <defs>
@@ -85,7 +90,7 @@ export default function WeightChart({
             className="fill-bone-faint"
             style={{ fontSize: "9px", letterSpacing: "0.08em" }}
           >
-            Ziel {target} kg
+            {d.target} {target} kg
           </text>
         </>
       )}
