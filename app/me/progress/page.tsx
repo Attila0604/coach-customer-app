@@ -4,12 +4,13 @@ import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import AppHeader from "@/components/nav/AppHeader";
 import WeightChart, { type WeightPoint } from "@/components/progress/WeightChart";
+import { getDict, resolveLocale, LOCALE_TAG, type Locale } from "@/lib/i18n";
 
 const SESSION_COOKIE = "coach_customer_id";
 const TZ = "Europe/Vienna";
 
-function formatDayShort(iso: string): string {
-  return new Date(`${iso}T12:00:00Z`).toLocaleDateString("de-DE", {
+function formatDayShort(iso: string, locale: Locale): string {
+  return new Date(`${iso}T12:00:00Z`).toLocaleDateString(LOCALE_TAG[locale], {
     day: "2-digit",
     month: "2-digit",
     timeZone: TZ,
@@ -33,7 +34,7 @@ export default async function ProgressPage() {
   const [{ data: profile }, { data: rawCheckins }] = await Promise.all([
     admin
       .from("customer_profiles")
-      .select("weight_start_kg, weight_target_kg")
+      .select("weight_start_kg, weight_target_kg, language")
       .eq("customer_id", customerId)
       .maybeSingle(),
     admin
@@ -43,13 +44,15 @@ export default async function ProgressPage() {
       .order("week_of", { ascending: true }),
   ]);
 
+  const locale = resolveLocale(profile?.language as string | null | undefined);
+  const d = getDict(locale);
   const checkins: Checkin[] = (rawCheckins as Checkin[]) || [];
   const weightCheckins = checkins.filter((c) => c.weight_kg != null);
 
   // Chart: bis zu 26 jüngste Gewichts-Datenpunkte
   const chartSource = weightCheckins.slice(-26);
   const points: WeightPoint[] = chartSource.map((c) => ({
-    label: formatDayShort(c.week_of),
+    label: formatDayShort(c.week_of, locale),
     value: Number(c.weight_kg),
   }));
 
@@ -80,26 +83,22 @@ export default async function ProgressPage() {
 
   return (
     <>
-      <AppHeader title="Fortschritt" />
+      <AppHeader title={d.progress.title} />
       <main className="min-h-screen px-6 pt-6 max-w-md mx-auto">
 
       <section className="mb-10 text-center">
         <h1 className="font-serif text-4xl text-bone leading-tight mb-3 font-normal">
-          Dein Verlauf
+          {d.progress.heading}
         </h1>
         <p className="text-sm text-bone-muted leading-relaxed">
-          Basierend auf deinen wöchentlichen Check-ins.
+          {d.progress.subtitle}
         </p>
       </section>
 
       {weightCheckins.length === 0 ? (
         <section className="border-t border-white/[0.08] pt-8">
           <p className="text-sm text-bone-faint italic leading-relaxed">
-            Noch keine Gewichtsdaten. Trag deinen{" "}
-            <Link href="/me/checkin" className="text-gold underline">
-              Check-in
-            </Link>{" "}
-            ein, dann erscheint hier dein Verlauf. 📈
+            {d.progress.emptyText}
           </p>
         </section>
       ) : (
@@ -107,14 +106,14 @@ export default async function ProgressPage() {
           {/* Kennzahlen */}
           <section className="mb-10 border-t border-white/[0.08] pt-8">
             <div className="grid grid-cols-3 gap-3 mb-8">
-              <Stat label="Start" value={startWeight} unit="kg" />
-              <Stat label="Aktuell" value={currentWeight} unit="kg" accent />
-              <Stat label="Ziel" value={target} unit="kg" />
+              <Stat label={d.progress.start} value={startWeight} unit="kg" locale={locale} />
+              <Stat label={d.progress.current} value={currentWeight} unit="kg" accent locale={locale} />
+              <Stat label={d.progress.target} value={target} unit="kg" locale={locale} />
             </div>
 
             {delta != null && (
               <p className="text-sm text-bone-muted">
-                Veränderung seit Start:{" "}
+                {d.progress.changeSince}{" "}
                 <span
                   className={
                     delta < 0
@@ -125,7 +124,7 @@ export default async function ProgressPage() {
                   }
                 >
                   {delta > 0 ? "+" : ""}
-                  {delta.toLocaleString("de-DE")} kg
+                  {delta.toLocaleString(LOCALE_TAG[locale])} kg
                 </span>
               </p>
             )}
@@ -135,14 +134,14 @@ export default async function ProgressPage() {
           {points.length >= 2 ? (
             <section className="mb-10 border-t border-white/[0.08] pt-8">
               <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-5">
-                Gewichtsverlauf
+                {d.progress.weightTrend}
               </p>
-              <WeightChart points={points} target={target} />
+              <WeightChart points={points} target={target} locale={locale} />
             </section>
           ) : (
             <section className="mb-10 border-t border-white/[0.08] pt-8">
               <p className="text-sm text-bone-faint italic">
-                Ab dem zweiten Check-in mit Gewicht siehst du hier deinen Verlauf.
+                {d.progress.needTwo}
               </p>
             </section>
           )}
@@ -151,12 +150,12 @@ export default async function ProgressPage() {
           {hasBefinden && (
             <section className="mb-10 border-t border-white/[0.08] pt-8">
               <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-5">
-                Befinden zuletzt
+                {d.progress.lastWellbeing}
               </p>
               <div className="space-y-3">
-                <RatingRow label="Stimmung" value={lastCheckin!.mood_rating} />
-                <RatingRow label="Energie" value={lastCheckin!.energy_rating} />
-                <RatingRow label="Schlaf" value={lastCheckin!.sleep_rating} />
+                <RatingRow label={d.checkin.mood} value={lastCheckin!.mood_rating} />
+                <RatingRow label={d.checkin.energy} value={lastCheckin!.energy_rating} />
+                <RatingRow label={d.checkin.sleep} value={lastCheckin!.sleep_rating} />
               </div>
             </section>
           )}
@@ -168,7 +167,7 @@ export default async function ProgressPage() {
           href="/me/checkin"
           className="text-[11px] uppercase tracking-caps text-gold hover:text-gold-soft transition-colors font-medium"
         >
-          + Neuer Check-in
+          {d.progress.newCheckin}
         </Link>
       </footer>
     </main>
@@ -181,11 +180,13 @@ function Stat({
   value,
   unit,
   accent,
+  locale,
 }: {
   label: string;
   value: number | null;
   unit: string;
   accent?: boolean;
+  locale: Locale;
 }) {
   return (
     <div className="border border-white/[0.08] px-4 py-4 bg-black/20">
@@ -197,7 +198,7 @@ function Stat({
           accent ? "text-gold" : "text-bone"
         }`}
       >
-        {value != null ? value.toLocaleString("de-DE") : "—"}
+        {value != null ? value.toLocaleString(LOCALE_TAG[locale]) : "—"}
         {value != null && (
           <span className="text-bone-faint text-sm"> {unit}</span>
         )}
