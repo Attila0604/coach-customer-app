@@ -10,6 +10,8 @@
 // unabhängig davon, welche Konvention ein einzelner Datensatz nutzt.
 // ============================================================================
 
+import type { Locale } from "@/lib/i18n";
+
 export type MealTypeKey = "breakfast" | "lunch" | "dinner" | "snack";
 
 const ALIASES: Record<string, MealTypeKey> = {
@@ -35,6 +37,18 @@ const LABEL_DE: Record<MealTypeKey, string> = {
   lunch: "Mittagessen",
   dinner: "Abendessen",
   snack: "Snack",
+};
+
+const LABEL_BY_LOCALE: Record<Locale, Record<MealTypeKey, string>> = {
+  de: LABEL_DE,
+  it: { breakfast: "Colazione", lunch: "Pranzo", dinner: "Cena", snack: "Spuntino" },
+  hu: { breakfast: "Reggeli", lunch: "Ebéd", dinner: "Vacsora", snack: "Snack" },
+};
+
+const FALLBACK_BY_LOCALE: Record<Locale, string> = {
+  de: "Mahlzeit",
+  it: "Pasto",
+  hu: "Étkezés",
 };
 
 const EMOJI: Record<MealTypeKey, string> = {
@@ -71,6 +85,20 @@ export function mealTypeLabelDe(
     return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
   }
   return fallback;
+}
+
+// Sprachabhängiges Label (de | it | hu).
+export function mealTypeLabel(
+  raw: string | null | undefined,
+  locale: Locale,
+  fallback?: string
+): string {
+  const key = normalizeMealType(raw);
+  if (key) return LABEL_BY_LOCALE[locale][key];
+  if (raw && raw.trim()) {
+    return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+  }
+  return fallback ?? FALLBACK_BY_LOCALE[locale];
 }
 
 export function mealTypeEmoji(raw: string | null | undefined): string {
