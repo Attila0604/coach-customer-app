@@ -3,21 +3,23 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import AppHeader from "@/components/nav/AppHeader";
+import { getDict, LOCALE_TAG, type Locale } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 
 const SESSION_COOKIE = "coach_customer_id";
 const TZ = "Europe/Vienna";
 
-function formatDuration(seconds: number | null): string {
+function formatDuration(seconds: number | null, minUnit: string): string {
   if (!seconds || seconds <= 0) return "—";
   const min = Math.floor(seconds / 60);
   const sec = seconds % 60;
   if (min === 0) return `${sec}s`;
-  if (sec === 0) return `${min} Min`;
-  return `${min} Min ${sec}s`;
+  if (sec === 0) return `${min} ${minUnit}`;
+  return `${min} ${minUnit} ${sec}s`;
 }
 
-function formatDayDe(iso: string): string {
-  return new Date(iso).toLocaleDateString("de-DE", {
+function formatDay(iso: string, locale: Locale): string {
+  return new Date(iso).toLocaleDateString(LOCALE_TAG[locale], {
     weekday: "short",
     day: "2-digit",
     month: "2-digit",
@@ -25,16 +27,16 @@ function formatDayDe(iso: string): string {
   });
 }
 
-function formatTimeDe(iso: string): string {
-  return new Date(iso).toLocaleTimeString("de-DE", {
+function formatTime(iso: string, locale: Locale): string {
+  return new Date(iso).toLocaleTimeString(LOCALE_TAG[locale], {
     hour: "2-digit",
     minute: "2-digit",
     timeZone: TZ,
   });
 }
 
-function monthKeyDe(iso: string): string {
-  return new Date(iso).toLocaleDateString("de-DE", {
+function monthKey(iso: string, locale: Locale): string {
+  return new Date(iso).toLocaleDateString(LOCALE_TAG[locale], {
     month: "long",
     year: "numeric",
     timeZone: TZ,
@@ -56,6 +58,8 @@ export default async function WorkoutHistoryPage() {
   if (!customerId) redirect("/");
 
   const admin = createAdminClient();
+  const locale = await getLocale();
+  const d = getDict(locale);
 
   const { data: raw } = await admin
     .from("workout_sessions")
@@ -87,7 +91,7 @@ export default async function WorkoutHistoryPage() {
   // Nach Monat gruppieren (Reihenfolge bleibt: neueste zuerst)
   const groups: { label: string; items: SessionRow[] }[] = [];
   for (const s of sessions) {
-    const label = monthKeyDe(s.started_at);
+    const label = monthKey(s.started_at, locale);
     const last = groups[groups.length - 1];
     if (last && last.label === label) last.items.push(s);
     else groups.push({ label, items: [s] });
@@ -95,19 +99,22 @@ export default async function WorkoutHistoryPage() {
 
   return (
     <>
-      <AppHeader title="Verlauf" eyebrow="Training" />
+      <AppHeader title={d.training.history} eyebrow={d.training.title} />
       <main className="min-h-screen px-6 pt-6 max-w-md mx-auto">
 
       <section className="mb-10 text-center">
         <h1 className="font-serif text-4xl text-bone leading-tight mb-3 font-normal">
-          Deine Workouts
+          {d.history.heading}
         </h1>
         <p className="text-sm text-bone-muted leading-relaxed">
           {sessions.length === 0
-            ? "Noch keine abgeschlossenen Workouts."
-            : `${completedCount} abgeschlossen${
+            ? d.history.none
+            : `${d.history.completed.replace("{n}", String(completedCount))}${
                 sessions.length > completedCount
-                  ? ` · ${sessions.length - completedCount} abgebrochen`
+                  ? ` ${d.history.aborted.replace(
+                      "{n}",
+                      String(sessions.length - completedCount)
+                    )}`
                   : ""
               }`}
         </p>
@@ -116,7 +123,7 @@ export default async function WorkoutHistoryPage() {
       {sessions.length === 0 ? (
         <section className="border-t border-white/[0.08] pt-8">
           <p className="text-sm text-bone-faint italic leading-relaxed">
-            Sobald du ein Training startest und abschließt, erscheint es hier. 💪
+            {d.history.emptyBody}
           </p>
         </section>
       ) : (
@@ -146,10 +153,10 @@ export default async function WorkoutHistoryPage() {
                   <li key={s.id} className="border-l-2 border-gold/40 pl-4">
                     <div className="flex justify-between items-baseline gap-3 mb-1">
                       <p className="text-sm text-bone font-medium">
-                        {day?.title || "Workout"}
+                        {day?.title || d.history.workoutFallback}
                       </p>
                       <span className="text-[11px] text-bone-faint tabular-nums whitespace-nowrap">
-                        {formatDayDe(s.started_at)} · {formatTimeDe(s.started_at)}
+                        {formatDay(s.started_at, locale)} · {formatTime(s.started_at, locale)}
                       </span>
                     </div>
                     {day?.subtitle && (
@@ -158,12 +165,12 @@ export default async function WorkoutHistoryPage() {
                       </p>
                     )}
                     <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-bone-faint tabular-nums">
-                      <span>{formatDuration(s.total_duration_seconds)}</span>
-                      <span>· {totalSets} {totalSets === 1 ? "Satz" : "Sätze"}</span>
-                      {volume > 0 && <span>· {volume.toLocaleString("de-DE")} kg Vol.</span>}
+                      <span>{formatDuration(s.total_duration_seconds, d.training.minUnit)}</span>
+                      <span>· {totalSets} {totalSets === 1 ? d.history.setOne : d.history.setMany}</span>
+                      {volume > 0 && <span>· {volume.toLocaleString(LOCALE_TAG[locale])} kg Vol.</span>}
                       {aborted && (
                         <span className="text-red-400/70 uppercase tracking-caps">
-                          · abgebrochen
+                          · {d.history.abortedBadge}
                         </span>
                       )}
                     </div>
