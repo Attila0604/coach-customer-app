@@ -96,4 +96,18 @@ export const hu: Dict = {
     errWeight: "A súlynak számnak kell lennie.",
     errWaist: "A deréknak számnak kell lennie.",
   },
+  progress: {
+    title: "Haladás",
+    heading: "A te haladásod",
+    subtitle: "A heti check-injeid alapján.",
+    emptyText: "Még nincs súlyadat. Az első check-in után itt megjelenik a haladásod. 📈",
+    start: "Kezdő",
+    current: "Jelenlegi",
+    target: "Cél",
+    changeSince: "Változás a kezdés óta:",
+    weightTrend: "Súlyalakulás",
+    needTwo: "A második, súlyt tartalmazó check-intől látod itt a haladásod.",
+    lastWellbeing: "Legutóbbi közérzet",
+    newCheckin: "+ Új check-in",
+  },
 };
