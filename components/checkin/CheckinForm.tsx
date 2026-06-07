@@ -3,10 +3,12 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { saveCheckin, type CheckinInput } from '@/lib/actions/checkin';
+import { getDict, type Locale } from '@/lib/i18n';
 
 type Props = {
   initial: CheckinInput;
   alreadyCheckedIn: boolean;
+  locale: Locale;
 };
 
 function RatingPicker({
@@ -46,7 +48,8 @@ function RatingPicker({
   );
 }
 
-export default function CheckinForm({ initial, alreadyCheckedIn }: Props) {
+export default function CheckinForm({ initial, alreadyCheckedIn, locale }: Props) {
+  const d = getDict(locale).checkin;
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -75,11 +78,11 @@ export default function CheckinForm({ initial, alreadyCheckedIn }: Props) {
     setError(null);
 
     if (weight.trim() && parseNum(weight) == null) {
-      setError('Gewicht muss eine Zahl sein.');
+      setError(d.errWeight);
       return;
     }
     if (waist.trim() && parseNum(waist) == null) {
-      setError('Taille muss eine Zahl sein.');
+      setError(d.errWaist);
       return;
     }
 
@@ -109,10 +112,8 @@ export default function CheckinForm({ initial, alreadyCheckedIn }: Props) {
   if (done) {
     return (
       <div className="border border-gold/30 bg-gold/[0.05] p-8 text-center">
-        <p className="font-serif text-2xl text-bone mb-2">Gespeichert ✓</p>
-        <p className="text-sm text-bone-muted">
-          Danke! Dein Coach sieht deinen Check-in.
-        </p>
+        <p className="font-serif text-2xl text-bone mb-2">{d.savedTitle}</p>
+        <p className="text-sm text-bone-muted">{d.savedBody}</p>
       </div>
     );
   }
@@ -121,52 +122,51 @@ export default function CheckinForm({ initial, alreadyCheckedIn }: Props) {
     <form onSubmit={handleSubmit} className="space-y-8">
       {alreadyCheckedIn && (
         <p className="text-[12px] text-bone-faint italic">
-          Du hast diese Woche bereits eingecheckt — du kannst die Werte hier
-          aktualisieren.
+          {d.alreadyChecked}
         </p>
       )}
 
       <div>
         <label className="text-[10px] uppercase tracking-caps text-bone-faint font-medium block mb-2.5">
-          Gewicht (kg)
+          {d.weightLabel}
         </label>
         <input
           type="text"
           inputMode="decimal"
           value={weight}
           onChange={(e) => setWeight(e.target.value)}
-          placeholder="z.B. 78,5"
+          placeholder={d.weightPlaceholder}
           className="w-full bg-white/[0.04] border border-white/[0.1] px-3.5 py-3 text-lg text-bone tabular-nums rounded-md outline-none focus:border-gold/40 transition"
         />
       </div>
 
-      <RatingPicker label="Stimmung" value={mood} onChange={setMood} />
-      <RatingPicker label="Energie" value={energy} onChange={setEnergy} />
-      <RatingPicker label="Schlaf" value={sleep} onChange={setSleep} />
+      <RatingPicker label={d.mood} value={mood} onChange={setMood} />
+      <RatingPicker label={d.energy} value={energy} onChange={setEnergy} />
+      <RatingPicker label={d.sleep} value={sleep} onChange={setSleep} />
 
       <div>
         <label className="text-[10px] uppercase tracking-caps text-bone-faint font-medium block mb-2.5">
-          Taille (cm) · optional
+          {d.waistLabel}
         </label>
         <input
           type="text"
           inputMode="decimal"
           value={waist}
           onChange={(e) => setWaist(e.target.value)}
-          placeholder="z.B. 84"
+          placeholder={d.waistPlaceholder}
           className="w-full bg-white/[0.04] border border-white/[0.1] px-3.5 py-3 text-lg text-bone tabular-nums rounded-md outline-none focus:border-gold/40 transition"
         />
       </div>
 
       <div>
         <label className="text-[10px] uppercase tracking-caps text-bone-faint font-medium block mb-2.5">
-          Notiz an deinen Coach · optional
+          {d.noteLabel}
         </label>
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={3}
-          placeholder="Wie lief die Woche?"
+          placeholder={d.notePlaceholder}
           className="w-full bg-white/[0.04] border border-white/[0.1] px-3.5 py-3 text-sm text-bone rounded-md outline-none focus:border-gold/40 transition resize-none"
         />
       </div>
@@ -178,7 +178,7 @@ export default function CheckinForm({ initial, alreadyCheckedIn }: Props) {
         disabled={isPending}
         className="w-full py-3.5 bg-gold text-ink-900 text-sm font-medium rounded-md hover:bg-gold-soft transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {isPending ? 'Speichere…' : 'Check-in speichern'}
+        {isPending ? d.saving : d.save}
       </button>
     </form>
   );
