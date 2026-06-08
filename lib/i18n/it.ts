@@ -186,4 +186,13 @@ export const it: Dict = {
     skipExercise: "→ Salta al prossimo esercizio",
     noExercises: "Nessun esercizio disponibile.",
   },
+  nutrition: {
+    title: "Nutrizione",
+    heading: "La tua settimana",
+    subtitle: "Creato dal tuo coach.",
+    emptyBody: "Nessun piano pubblicato. Il tuo coach ci sta lavorando — presto disponibile.",
+    days: "Giorni",
+    meals: "Pasti",
+    noMeals: "Nessun pasto per questo giorno.",
+  },
 };
