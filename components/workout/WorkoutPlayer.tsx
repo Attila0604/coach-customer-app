@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { getDict, type Locale } from '@/lib/i18n';
 import {
   logSet,
   completeWorkoutSession,
@@ -65,11 +66,11 @@ function formatReps(min: number | null, max: number | null): string {
   return `${min}-${max}`;
 }
 
-function formatDuration(seconds: number): string {
+function formatDuration(seconds: number, minUnit: string): string {
   const min = Math.floor(seconds / 60);
   const sec = seconds % 60;
   if (min === 0) return `${sec}s`;
-  return `${min} Min ${sec > 0 ? sec + 's' : ''}`.trim();
+  return `${min} ${minUnit} ${sec > 0 ? sec + 's' : ''}`.trim();
 }
 
 function formatTimerMMSS(seconds: number): string {
@@ -96,8 +97,16 @@ function determineStartPosition(
   return { exerciseIdx: exercises.length - 1, nextSetNumber: (exercises[exercises.length - 1]?.sets || 1) + 1 };
 }
 
-export default function WorkoutPlayer({ session }: { session: Session }) {
+export default function WorkoutPlayer({
+  session,
+  locale,
+}: {
+  session: Session;
+  locale: Locale;
+}) {
   const router = useRouter();
+  const dict = getDict(locale);
+  const w = dict.workout;
 
   const exercises = [...session.training_days.exercises].sort(
     (a, b) => a.sort_order - b.sort_order
@@ -167,11 +176,11 @@ export default function WorkoutPlayer({ session }: { session: Session }) {
     const weight = weightInput ? parseFloat(weightInput.replace(',', '.')) : null;
 
     if (reps != null && (isNaN(reps) || reps < 0)) {
-      setError('Reps müssen eine positive Zahl sein.');
+      setError(w.errReps);
       return;
     }
     if (weight != null && (isNaN(weight) || weight < 0)) {
-      setError('Gewicht muss eine positive Zahl sein.');
+      setError(w.errWeight);
       return;
     }
     setError(null);
@@ -308,25 +317,25 @@ export default function WorkoutPlayer({ session }: { session: Session }) {
       <main className="min-h-screen px-6 py-12 max-w-md mx-auto flex flex-col">
         <div className="flex-1 flex flex-col justify-center">
           <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-4 text-center">
-            Workout abgeschlossen
+            {w.completedEyebrow}
           </p>
           <h1 className="font-serif text-4xl text-bone leading-tight text-center mb-8">
             {day.title}
           </h1>
 
           <div className="space-y-4 border-t border-b border-white/[0.08] py-8 mb-8">
-            <Stat label="Dauer" value={formatDuration(completionStats.durationSeconds)} />
-            <Stat label="Übungen" value={`${completionStats.exercisesCompleted} / ${exercises.length}`} />
-            <Stat label="Sätze gesamt" value={`${completionStats.totalSets}`} />
+            <Stat label={w.statDuration} value={formatDuration(completionStats.durationSeconds, dict.training.minUnit)} />
+            <Stat label={w.statExercises} value={`${completionStats.exercisesCompleted} / ${exercises.length}`} />
+            <Stat label={w.statTotalSets} value={`${completionStats.totalSets}`} />
             {completionStats.totalVolume > 0 && (
-              <Stat label="Gesamt-Volumen" value={`${completionStats.totalVolume} kg`} />
+              <Stat label={w.statVolume} value={`${completionStats.totalVolume} kg`} />
             )}
           </div>
 
           {completionStats.personalRecords.length > 0 && (
             <div className="mb-8 p-6 bg-gold/[0.05] border border-gold/30">
               <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-3">
-                🏆 Persönlicher Rekord
+                {w.prTitle}
               </p>
               {completionStats.personalRecords.map((pr, i) => (
                 <div key={i} className="text-sm text-bone mb-1">
@@ -334,7 +343,7 @@ export default function WorkoutPlayer({ session }: { session: Session }) {
                   <span className="text-bone-muted">
                     {' · '}
                     {pr.newMax} kg
-                    {pr.previousMax != null && ` (vorher ${pr.previousMax} kg)`}
+                    {pr.previousMax != null && ` ${w.prPrevious.replace("{n}", String(pr.previousMax))}`}
                   </span>
                 </div>
               ))}
@@ -346,7 +355,7 @@ export default function WorkoutPlayer({ session }: { session: Session }) {
             onClick={() => router.push('/me/training')}
             className="w-full text-[11px] uppercase tracking-caps font-medium px-5 py-3 border border-bone/30 text-bone hover:bg-white/[0.04] transition"
           >
-            Zurück zur Übersicht
+            {w.backToOverview}
           </button>
         </div>
       </main>
@@ -359,11 +368,11 @@ export default function WorkoutPlayer({ session }: { session: Session }) {
       <main className="min-h-screen px-6 py-12 max-w-md mx-auto flex flex-col">
         <div className="flex-1 flex flex-col justify-center text-center">
           <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-4">
-            Workout pausiert
+            {w.pausedEyebrow}
           </p>
           <h1 className="font-serif text-3xl text-bone mb-3">{day.title}</h1>
           <p className="text-sm text-bone-muted mb-8">
-            {completedSets} von {totalSets} Sätzen abgeschlossen
+            {w.pausedProgress.replace("{a}", String(completedSets)).replace("{b}", String(totalSets))}
           </p>
           <div className="space-y-3">
             <button
@@ -372,7 +381,7 @@ export default function WorkoutPlayer({ session }: { session: Session }) {
               disabled={isPending}
               className="w-full text-[12px] uppercase tracking-caps font-medium px-6 py-4 border border-gold text-gold bg-gold/5 hover:bg-gold/15 transition disabled:opacity-30"
             >
-              ▶ Fortsetzen
+              {w.resume}
             </button>
             <button
               type="button"
@@ -380,7 +389,7 @@ export default function WorkoutPlayer({ session }: { session: Session }) {
               disabled={isPending}
               className="w-full text-[11px] uppercase tracking-caps font-medium px-5 py-3 border border-white/15 text-bone-muted hover:text-red-400 hover:border-red-400/40 transition disabled:opacity-30"
             >
-              Abbrechen
+              {w.cancel}
             </button>
           </div>
         </div>
@@ -393,9 +402,10 @@ export default function WorkoutPlayer({ session }: { session: Session }) {
     <main className="min-h-screen flex flex-col bg-black">
       {showAbortConfirm && (
         <ConfirmModal
-          title="Workout abbrechen?"
-          message="Bisherige Sätze bleiben gespeichert. Du kannst dieses Workout nicht fortsetzen."
-          confirmLabel="Ja, abbrechen"
+          title={w.abortTitle}
+          message={w.abortMessage}
+          confirmLabel={w.abortConfirm}
+          cancelLabel={w.cancel}
           confirmStyle="danger"
           onConfirm={confirmAbort}
           onCancel={() => setShowAbortConfirm(false)}
@@ -403,9 +413,10 @@ export default function WorkoutPlayer({ session }: { session: Session }) {
       )}
       {showSkipConfirm && (
         <ConfirmModal
-          title="Übung überspringen?"
-          message="Du gehst direkt zur nächsten Übung weiter."
-          confirmLabel="Ja, überspringen"
+          title={w.skipTitle}
+          message={w.skipMessage}
+          confirmLabel={w.skipConfirm}
+          cancelLabel={w.cancel}
           confirmStyle="primary"
           onConfirm={confirmSkipExercise}
           onCancel={() => setShowSkipConfirm(false)}
@@ -419,7 +430,7 @@ export default function WorkoutPlayer({ session }: { session: Session }) {
           disabled={isPending}
           className="text-[10px] uppercase tracking-caps text-bone-muted hover:text-bone transition disabled:opacity-30"
         >
-          ⏸ Pause
+          {w.pauseBtn}
         </button>
         <div className="flex-1 px-4">
           <div className="h-1 bg-white/[0.08] rounded-full overflow-hidden">
@@ -429,7 +440,7 @@ export default function WorkoutPlayer({ session }: { session: Session }) {
             />
           </div>
           <p className="text-[9px] tracking-caps uppercase text-bone-faint mt-1.5 text-center font-medium">
-            {currentExIdx + 1} / {exercises.length} Übungen · Satz {currentSet}
+            {currentExIdx + 1} / {exercises.length} {w.exercisesWord} · {w.setWord} {currentSet}
           </p>
         </div>
         <button
@@ -438,7 +449,7 @@ export default function WorkoutPlayer({ session }: { session: Session }) {
           disabled={isPending}
           className="text-[10px] uppercase tracking-caps text-bone-muted hover:text-red-400 transition disabled:opacity-30"
         >
-          ✕ Ende
+          {w.endBtn}
         </button>
       </header>
 
@@ -446,20 +457,20 @@ export default function WorkoutPlayer({ session }: { session: Session }) {
       {isResting ? (
         <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
           <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-6">
-            Pause
+            {w.restTitle}
           </p>
           <p className="font-serif text-8xl text-bone tabular-nums mb-8">
             {formatTimerMMSS(restSecondsLeft)}
           </p>
           <p className="text-sm text-bone-muted mb-12 text-center">
-            Nächster Satz: {currentExercise?.sets} × {formatReps(currentExercise?.reps_min ?? null, currentExercise?.reps_max ?? null)}
+            {w.nextSet} {currentExercise?.sets} × {formatReps(currentExercise?.reps_min ?? null, currentExercise?.reps_max ?? null)}
           </p>
           <button
             type="button"
             onClick={handleSkipRest}
             className="text-[11px] uppercase tracking-caps font-medium px-6 py-3 border border-bone/30 text-bone hover:bg-white/[0.04] transition"
           >
-            ▶ Pause überspringen
+            {w.skipRest}
           </button>
         </div>
       ) : (
@@ -468,7 +479,7 @@ export default function WorkoutPlayer({ session }: { session: Session }) {
           {currentExercise ? (
             <>
               <p className="text-[10px] uppercase tracking-caps text-gold font-medium mb-3">
-                Übung {currentExIdx + 1}
+                {w.exerciseLabel.replace("{n}", String(currentExIdx + 1))}
               </p>
               <h1 className="font-serif text-4xl text-bone leading-tight mb-3">
                 {currentExercise.name}
@@ -479,38 +490,38 @@ export default function WorkoutPlayer({ session }: { session: Session }) {
                 </p>
               )}
               <p className="text-sm text-bone-muted mb-8">
-                {currentExercise.sets} Sätze ×{' '}
-                {formatReps(currentExercise.reps_min, currentExercise.reps_max)} Reps
+                {currentExercise.sets} {w.setsWord} ×{' '}
+                {formatReps(currentExercise.reps_min, currentExercise.reps_max)} {w.repsWord}
                 {currentExercise.rest_seconds && (
-                  <> · {currentExercise.rest_seconds}s Pause</>
+                  <> · {currentExercise.rest_seconds}s {w.rest}</>
                 )}
               </p>
 
               {/* Set-Counter & Input */}
               <div className="border border-white/[0.08] p-6 mb-6">
                 <p className="text-[10px] uppercase tracking-caps text-bone-faint font-medium mb-5">
-                  Satz {currentSet} von {currentExercise.sets}
+                  {w.setOf.replace("{a}", String(currentSet)).replace("{b}", String(currentExercise.sets ?? ""))}
                 </p>
 
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   {currentExercise.weight_type !== 'body' && (
                     <div>
                       <label className="text-[10px] uppercase tracking-caps text-bone-faint font-medium block mb-2">
-                        Gewicht (kg)
+                        {dict.checkin.weightLabel}
                       </label>
                       <input
                         type="text"
                         inputMode="decimal"
                         value={weightInput}
                         onChange={(e) => setWeightInput(e.target.value)}
-                        placeholder="z.B. 70"
+                        placeholder={w.weightPlaceholder}
                         className="w-full bg-black border border-white/[0.12] px-3 py-3 text-2xl text-bone tabular-nums text-center focus:outline-none focus:border-gold/50"
                       />
                     </div>
                   )}
                   <div className={currentExercise.weight_type === 'body' ? 'col-span-2' : ''}>
                     <label className="text-[10px] uppercase tracking-caps text-bone-faint font-medium block mb-2">
-                      Reps
+                      {w.repsWord}
                     </label>
                     <input
                       type="text"
@@ -529,7 +540,7 @@ export default function WorkoutPlayer({ session }: { session: Session }) {
                   disabled={isPending}
                   className="w-full text-[12px] uppercase tracking-caps font-medium px-6 py-4 border border-gold text-gold bg-gold/5 hover:bg-gold/15 transition disabled:opacity-30"
                 >
-                  {isPending ? '...' : '✓ Satz abgeschlossen'}
+                  {isPending ? w.saving : w.setDone}
                 </button>
               </div>
 
@@ -537,7 +548,7 @@ export default function WorkoutPlayer({ session }: { session: Session }) {
               {currentExLogs.length > 0 && (
                 <div className="mb-6">
                   <p className="text-[10px] uppercase tracking-caps text-bone-faint font-medium mb-3">
-                    Bisher
+                    {w.previousSets}
                   </p>
                   <div className="space-y-1.5">
                     {currentExLogs.map((log) => (
@@ -545,10 +556,10 @@ export default function WorkoutPlayer({ session }: { session: Session }) {
                         key={log.id}
                         className="flex justify-between items-center text-sm text-bone-muted tabular-nums"
                       >
-                        <span>Satz {log.set_number}</span>
+                        <span>{w.setWord} {log.set_number}</span>
                         <span>
                           {log.weight_used_kg != null && `${log.weight_used_kg} kg · `}
-                          {log.reps_done != null && `${log.reps_done} Reps`}
+                          {log.reps_done != null && `${log.reps_done} ${w.repsWord}`}
                           {log.reps_done == null && log.weight_used_kg == null && '✓'}
                         </span>
                       </div>
@@ -564,7 +575,7 @@ export default function WorkoutPlayer({ session }: { session: Session }) {
                 disabled={isPending}
                 className="text-[10px] uppercase tracking-caps text-bone-faint hover:text-bone-muted transition mt-auto disabled:opacity-30"
               >
-                → Nächste Übung überspringen
+                {w.skipExercise}
               </button>
 
               {error && (
@@ -572,7 +583,7 @@ export default function WorkoutPlayer({ session }: { session: Session }) {
               )}
             </>
           ) : (
-            <p className="text-sm text-bone-muted text-center">Keine Übungen vorhanden.</p>
+            <p className="text-sm text-bone-muted text-center">{w.noExercises}</p>
           )}
         </div>
       )}
@@ -584,6 +595,7 @@ function ConfirmModal({
   title,
   message,
   confirmLabel,
+  cancelLabel,
   confirmStyle = 'primary',
   onConfirm,
   onCancel,
@@ -591,6 +603,7 @@ function ConfirmModal({
   title: string;
   message: string;
   confirmLabel: string;
+  cancelLabel: string;
   confirmStyle?: 'primary' | 'danger';
   onConfirm: () => void;
   onCancel: () => void;
@@ -627,7 +640,7 @@ function ConfirmModal({
             onClick={onCancel}
             className="w-full text-[11px] uppercase tracking-caps font-medium px-5 py-3 border border-white/15 text-bone-muted hover:text-bone hover:border-white/30 transition"
           >
-            Abbrechen
+            {cancelLabel}
           </button>
         </div>
       </div>
