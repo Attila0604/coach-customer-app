@@ -187,6 +187,15 @@ export const de = {
     skipExercise: "→ Nächste Übung überspringen",
     noExercises: "Keine Übungen vorhanden.",
   },
+  nutrition: {
+    title: "Ernährung",
+    heading: "Deine Woche",
+    subtitle: "Von deinem Coach erstellt.",
+    emptyBody: "Noch kein Plan veröffentlicht. Dein Coach arbeitet daran — bald verfügbar.",
+    days: "Tage",
+    meals: "Mahlzeiten",
+    noMeals: "Keine Mahlzeiten für diesen Tag.",
+  },
 };
 
 export type Dict = typeof de;
