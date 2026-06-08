@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import WorkoutPlayer from '@/components/workout/WorkoutPlayer';
+import { getLocale } from '@/lib/i18n/server';
 
 const SESSION_COOKIE = 'coach_customer_id';
 
@@ -48,5 +49,6 @@ export default async function WorkoutSessionPage({
     redirect('/me/training');
   }
 
-  return <WorkoutPlayer session={session as any} />;
+  const locale = await getLocale();
+  return <WorkoutPlayer session={session as any} locale={locale} />;
 }
