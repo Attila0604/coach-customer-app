@@ -4,20 +4,10 @@ import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import AppHeader from "@/components/nav/AppHeader";
 import { viennaDateKey } from "@/lib/date";
-import { mealTypeLabelDe, mealTypeEmoji, mealTypeOrder } from "@/lib/meals";
+import { mealTypeLabel, mealTypeEmoji, mealTypeOrder } from "@/lib/meals";
+import { getDict, resolveLocale, LOCALE_TAG, type Locale } from "@/lib/i18n";
 
 const SESSION_COOKIE = "coach_customer_id";
-
-const WEEKDAY_SHORT_DE = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
-const WEEKDAY_LONG_DE = [
-  "Sonntag",
-  "Montag",
-  "Dienstag",
-  "Mittwoch",
-  "Donnerstag",
-  "Freitag",
-  "Samstag",
-];
 
 type MealItem = {
   food: string;
@@ -59,14 +49,16 @@ function plusDaysIso(iso: string, days: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function weekdayShort(iso: string): string {
-  const d = new Date(`${iso}T12:00:00`);
-  return WEEKDAY_SHORT_DE[d.getDay()];
+function weekdayShort(iso: string, locale: Locale): string {
+  return new Date(`${iso}T12:00:00`).toLocaleDateString(LOCALE_TAG[locale], {
+    weekday: "short",
+  });
 }
 
-function weekdayLong(iso: string): string {
-  const d = new Date(`${iso}T12:00:00`);
-  return WEEKDAY_LONG_DE[d.getDay()];
+function weekdayLong(iso: string, locale: Locale): string {
+  return new Date(`${iso}T12:00:00`).toLocaleDateString(LOCALE_TAG[locale], {
+    weekday: "long",
+  });
 }
 
 function formatDayShort(iso: string): string {
@@ -74,9 +66,8 @@ function formatDayShort(iso: string): string {
   return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function formatDateDe(iso: string): string {
-  const d = new Date(`${iso}T12:00:00`);
-  return d.toLocaleDateString("de-DE", {
+function formatDate(iso: string, locale: Locale): string {
+  return new Date(`${iso}T12:00:00`).toLocaleDateString(LOCALE_TAG[locale], {
     weekday: "long",
     day: "2-digit",
     month: "long",
@@ -121,11 +112,13 @@ export default async function NutritionPage({
   const { data: profile } = await admin
     .from("customer_profiles")
     .select(
-      "daily_kcal_target, protein_target_g, carbs_target_g, fat_target_g"
+      "daily_kcal_target, protein_target_g, carbs_target_g, fat_target_g, language"
     )
     .eq("customer_id", customerId)
     .maybeSingle();
 
+  const locale = resolveLocale(profile?.language as string | null | undefined);
+  const d = getDict(locale);
   const kcalGoal = profile?.daily_kcal_target ?? null;
   const proteinGoal = profile?.protein_target_g ?? null;
   const carbsGoal = profile?.carbs_target_g ?? null;
@@ -172,23 +165,22 @@ export default async function NutritionPage({
 
   return (
     <>
-      <AppHeader title="Ernährung" />
+      <AppHeader title={d.nutrition.title} />
       <main className="min-h-screen px-6 pt-6 max-w-md mx-auto">
 
       <section className="mb-10 text-center">
         <h1 className="font-serif text-4xl text-bone leading-tight mb-3 font-normal">
-          Deine Woche
+          {d.nutrition.heading}
         </h1>
         <p className="text-sm text-bone-muted leading-relaxed">
-          Von deinem Coach erstellt.
+          {d.nutrition.subtitle}
         </p>
       </section>
 
       {plans.length === 0 ? (
         <section className="mb-10 border-t border-white/[0.08] pt-8">
           <p className="text-sm text-bone-faint italic">
-            Noch kein Plan veröffentlicht. Dein Coach arbeitet daran — bald
-            verfügbar.
+            {d.nutrition.emptyBody}
           </p>
         </section>
       ) : (
@@ -196,7 +188,7 @@ export default async function NutritionPage({
           {/* Day strip */}
           <section className="mb-10 border-t border-white/[0.08] pt-8">
             <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-5">
-              Tage
+              {d.nutrition.days}
             </p>
             <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1">
               {plans.map((p) => {
@@ -221,7 +213,7 @@ export default async function NutritionPage({
                           : "text-bone-muted"
                       }`}
                     >
-                      {weekdayShort(p.plan_date)}
+                      {weekdayShort(p.plan_date, locale)}
                     </p>
                     <p
                       className={`text-[10px] tabular-nums mt-0.5 ${
@@ -247,6 +239,7 @@ export default async function NutritionPage({
           {activePlan && (
             <DayDetail
               plan={activePlan}
+              locale={locale}
               isToday={activePlan.plan_date === today}
               kcalGoal={kcalGoal}
               proteinGoal={proteinGoal}
@@ -266,6 +259,7 @@ export default async function NutritionPage({
 
 function DayDetail({
   plan,
+  locale,
   isToday,
   kcalGoal,
   proteinGoal,
@@ -273,12 +267,14 @@ function DayDetail({
   fatGoal,
 }: {
   plan: PublishedPlan;
+  locale: Locale;
   isToday: boolean;
   kcalGoal: number | null;
   proteinGoal: number | null;
   carbsGoal: number | null;
   fatGoal: number | null;
 }) {
+  const d = getDict(locale);
   const meals = sortMeals(plan.meals || []);
 
   const totals = {
@@ -292,52 +288,56 @@ function DayDetail({
     <>
       <section className="mb-10 border-t border-white/[0.08] pt-8">
         <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-3">
-          {isToday ? "Heute" : weekdayLong(plan.plan_date)}
+          {isToday ? d.home.today : weekdayLong(plan.plan_date, locale)}
         </p>
         <h2 className="font-serif text-2xl text-bone leading-tight mb-5 font-normal">
-          {formatDateDe(plan.plan_date)}
+          {formatDate(plan.plan_date, locale)}
         </h2>
 
         <div className="space-y-3">
           <MacroBar
-            label="Kalorien"
+            label={d.home.macros.calories}
             value={totals.kcal}
             target={kcalGoal}
             unit="kcal"
+            locale={locale}
           />
           <MacroBar
-            label="Protein"
+            label={d.home.macros.protein}
             value={totals.protein}
             target={proteinGoal}
             unit="g"
+            locale={locale}
           />
           <MacroBar
-            label="Carbs"
+            label={d.home.macros.carbs}
             value={totals.carbs}
             target={carbsGoal}
             unit="g"
+            locale={locale}
           />
           <MacroBar
-            label="Fett"
+            label={d.home.macros.fat}
             value={totals.fat}
             target={fatGoal}
             unit="g"
+            locale={locale}
           />
         </div>
       </section>
 
       <section className="mb-10 border-t border-white/[0.08] pt-8">
         <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-5">
-          Mahlzeiten · {meals.length}
+          {d.nutrition.meals} · {meals.length}
         </p>
         {meals.length === 0 ? (
           <p className="text-sm text-bone-faint italic">
-            Keine Mahlzeiten für diesen Tag.
+            {d.nutrition.noMeals}
           </p>
         ) : (
           <div className="space-y-6">
             {meals.map((meal, mIdx) => (
-              <MealCard key={mIdx} meal={meal} />
+              <MealCard key={mIdx} meal={meal} locale={locale} />
             ))}
           </div>
         )}
@@ -351,11 +351,13 @@ function MacroBar({
   value,
   target,
   unit,
+  locale,
 }: {
   label: string;
   value: number;
   target: number | null;
   unit: string;
+  locale: Locale;
 }) {
   const pct =
     target && target > 0 ? Math.min(100, (value / target) * 100) : 0;
@@ -364,11 +366,11 @@ function MacroBar({
       <div className="flex justify-between items-baseline mb-1.5">
         <span className="text-sm text-bone-muted">{label}</span>
         <span className="text-sm text-bone font-medium tabular-nums">
-          {Math.round(value).toLocaleString("de-DE")}
+          {Math.round(value).toLocaleString(LOCALE_TAG[locale])}
           {target != null && (
             <span className="text-bone-faint">
               {" / "}
-              {Math.round(target).toLocaleString("de-DE")} {unit}
+              {Math.round(target).toLocaleString(LOCALE_TAG[locale])} {unit}
             </span>
           )}
           {target == null && (
@@ -386,8 +388,8 @@ function MacroBar({
   );
 }
 
-function MealCard({ meal }: { meal: Meal }) {
-  const typeDe = mealTypeLabelDe(meal.meal_type);
+function MealCard({ meal, locale }: { meal: Meal; locale: Locale }) {
+  const typeLabel = mealTypeLabel(meal.meal_type, locale);
   const emoji = mealTypeEmoji(meal.meal_type);
   const items = meal.items || [];
 
@@ -398,10 +400,10 @@ function MealCard({ meal }: { meal: Meal }) {
           <span className="text-base">{emoji}</span>
           <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-caps text-gold font-medium">
-              {typeDe}
+              {typeLabel}
             </p>
             <p className="font-serif text-base italic text-bone leading-tight mt-0.5">
-              {meal.name || "Mahlzeit"}
+              {meal.name || getDict(locale).home.mealDefault}
             </p>
           </div>
         </div>
