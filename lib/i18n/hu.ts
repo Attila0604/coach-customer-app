@@ -186,4 +186,13 @@ export const hu: Dict = {
     skipExercise: "→ Következő gyakorlat kihagyása",
     noExercises: "Nincs elérhető gyakorlat.",
   },
+  nutrition: {
+    title: "Táplálkozás",
+    heading: "A heted",
+    subtitle: "Az edződ készítette.",
+    emptyBody: "Még nincs közzétett terv. Az edződ dolgozik rajta — hamarosan elérhető.",
+    days: "Napok",
+    meals: "Étkezések",
+    noMeals: "Nincs étkezés erre a napra.",
+  },
 };
