@@ -131,23 +131,33 @@ export default async function NutritionPage({
   const { data: rawPlans } = await admin
     .from("meal_plans")
     .select(
-      "id, plan_date, meals, total_kcal, total_protein_g, total_carbs_g, total_fat_g"
+      "id, plan_date, meals, total_kcal, total_protein_g, total_carbs_g, total_fat_g, updated_at"
     )
     .eq("customer_id", customerId)
     .eq("status", "published")
     .gte("plan_date", today)
     .lte("plan_date", sevenDaysLater)
-    .order("plan_date", { ascending: true });
+    .order("plan_date", { ascending: true })
+    .order("updated_at", { ascending: false });
 
-  const plans: PublishedPlan[] = (rawPlans ?? []).map((p: any) => ({
-    id: p.id,
-    plan_date: p.plan_date,
-    meals: Array.isArray(p.meals) ? p.meals : [],
-    total_kcal: p.total_kcal,
-    total_protein_g: p.total_protein_g,
-    total_carbs_g: p.total_carbs_g,
-    total_fat_g: p.total_fat_g,
-  }));
+  // Pro Tag nur die NEUESTE veröffentlichte Zeile behalten
+  // (schützt vor doppelten "published"-Einträgen aus früheren Veröffentlichungen)
+  const seenDates = new Set<string>();
+  const plans: PublishedPlan[] = (rawPlans ?? [])
+    .filter((p: any) => {
+      if (seenDates.has(p.plan_date)) return false;
+      seenDates.add(p.plan_date);
+      return true;
+    })
+    .map((p: any) => ({
+      id: p.id,
+      plan_date: p.plan_date,
+      meals: Array.isArray(p.meals) ? p.meals : [],
+      total_kcal: p.total_kcal,
+      total_protein_g: p.total_protein_g,
+      total_carbs_g: p.total_carbs_g,
+      total_fat_g: p.total_fat_g,
+    }));
 
   // Determine active plan: from searchParams ?d=YYYY-MM-DD, else today, else first available
   let activeDate: string | null = null;
