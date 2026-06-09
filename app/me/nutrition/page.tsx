@@ -190,7 +190,7 @@ export default async function NutritionPage({
             <p className="text-[11px] uppercase tracking-caps text-gold font-medium mb-5">
               {d.nutrition.days}
             </p>
-            <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1">
+            <div className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1">
               {plans.map((p) => {
                 const isActive = p.plan_date === activeDate;
                 const isToday = p.plan_date === today;
