@@ -74,7 +74,7 @@ export default async function TrainingPage() {
   const [planRes, activeSessionRes] = await Promise.all([
     admin
       .from("training_plans")
-      .select("id, name, weeks, current_week, status, start_date")
+      .select("id, name, weeks, current_week, status, start_date, translations")
       .eq("customer_id", customerId)
       .eq("status", "active")
       .order("created_at", { ascending: false })
@@ -93,6 +93,13 @@ export default async function TrainingPage() {
   const plan = planRes.data;
   const activeSession = activeSessionRes.data;
 
+  // Übersetzung des Kunden über das deutsche Original legen (Fallback: Deutsch).
+  const planTr: any =
+    plan && locale !== "de"
+      ? ((plan as any).translations?.[locale] ?? null)
+      : null;
+  if (plan && planTr?.name) (plan as any).name = planTr.name;
+
   let days: TrainingDay[] = [];
   const exercisesByDay = new Map<string, Exercise[]>();
 
@@ -105,6 +112,13 @@ export default async function TrainingPage() {
       .eq("plan_id", plan.id)
       .order("sort_order", { ascending: true });
     days = daysData || [];
+    if (planTr) {
+      days = days.map((dd) => ({
+        ...dd,
+        title: planTr.days?.[dd.id]?.title ?? dd.title,
+        subtitle: planTr.days?.[dd.id]?.subtitle ?? dd.subtitle,
+      }));
+    }
 
     if (days.length > 0) {
       const { data: exercisesData } = await admin
@@ -116,8 +130,13 @@ export default async function TrainingPage() {
         .order("sort_order", { ascending: true });
 
       (exercisesData || []).forEach((ex) => {
-        if (!exercisesByDay.has(ex.day_id)) exercisesByDay.set(ex.day_id, []);
-        exercisesByDay.get(ex.day_id)!.push(ex);
+        const exTr = planTr?.exercises?.[ex.id];
+        const exFinal = exTr
+          ? { ...ex, name: exTr.name ?? ex.name, notes: exTr.notes ?? ex.notes }
+          : ex;
+        if (!exercisesByDay.has(exFinal.day_id))
+          exercisesByDay.set(exFinal.day_id, []);
+        exercisesByDay.get(exFinal.day_id)!.push(exFinal);
       });
     }
   }
