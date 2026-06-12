@@ -8,7 +8,7 @@ import {
   viennaNoonAnchor,
   viennaDow,
 } from "@/lib/date";
-import { mealTypeLabel } from "@/lib/meals";
+import { mealTypeLabel, localizedMeals } from "@/lib/meals";
 import { getDict, resolveLocale, type Locale } from "@/lib/i18n";
 import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
 
@@ -279,7 +279,7 @@ export default async function MePage() {
   // Today's published meal plan (Coach has approved it)
   const { data: todayPlanRaw } = await admin
     .from("meal_plans")
-    .select("id, meals, total_kcal")
+    .select("id, meals, total_kcal, translations")
     .eq("customer_id", customerId)
     .eq("status", "published")
     .eq("plan_date", todayIsoStr)
@@ -287,7 +287,7 @@ export default async function MePage() {
 
   const todayPlan = todayPlanRaw
     ? {
-        meals: Array.isArray(todayPlanRaw.meals) ? todayPlanRaw.meals : [],
+        meals: localizedMeals(todayPlanRaw, locale),
         kcal: Number(todayPlanRaw.total_kcal) || 0,
       }
     : null;
