@@ -4,7 +4,7 @@ import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import AppHeader from "@/components/nav/AppHeader";
 import { viennaDateKey } from "@/lib/date";
-import { mealTypeLabel, mealTypeEmoji, mealTypeOrder } from "@/lib/meals";
+import { mealTypeLabel, mealTypeEmoji, mealTypeOrder, localizedMeals } from "@/lib/meals";
 import { getDict, resolveLocale, LOCALE_TAG, type Locale } from "@/lib/i18n";
 
 const SESSION_COOKIE = "coach_customer_id";
@@ -131,7 +131,7 @@ export default async function NutritionPage({
   const { data: rawPlans } = await admin
     .from("meal_plans")
     .select(
-      "id, plan_date, meals, total_kcal, total_protein_g, total_carbs_g, total_fat_g, updated_at"
+      "id, plan_date, meals, total_kcal, total_protein_g, total_carbs_g, total_fat_g, updated_at, translations"
     )
     .eq("customer_id", customerId)
     .eq("status", "published")
@@ -152,7 +152,7 @@ export default async function NutritionPage({
     .map((p: any) => ({
       id: p.id,
       plan_date: p.plan_date,
-      meals: Array.isArray(p.meals) ? p.meals : [],
+      meals: localizedMeals(p, locale),
       total_kcal: p.total_kcal,
       total_protein_g: p.total_protein_g,
       total_carbs_g: p.total_carbs_g,
