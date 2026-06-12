@@ -111,3 +111,23 @@ export function mealTypeOrder(raw: string | null | undefined): number {
   const key = normalizeMealType(raw);
   return key ? ORDER[key] : 99;
 }
+
+// ============================================================================
+// Übersetzte Mahlzeiten (nicht-destruktiv).
+// Das deutsche Original liegt in meal_plans.meals, Übersetzungen in
+// meal_plans.translations[locale]. Für 'de' (oder fehlende Übersetzung)
+// wird auf das deutsche Original zurückgefallen.
+// ============================================================================
+export function localizedMeals(
+  row: { meals?: unknown; translations?: unknown } | null | undefined,
+  locale: Locale
+): any[] {
+  if (!row) return [];
+  if (locale !== "de") {
+    const tr = (row.translations as Record<string, unknown> | null | undefined)?.[
+      locale
+    ];
+    if (Array.isArray(tr)) return tr as any[];
+  }
+  return Array.isArray(row.meals) ? (row.meals as any[]) : [];
+}
