@@ -70,7 +70,7 @@ export default async function WorkoutHistoryPage() {
       started_at,
       ended_at,
       total_duration_seconds,
-      training_days(title, subtitle, day_number),
+      training_days(id, title, subtitle, day_number, training_plans(translations)),
       workout_logs(reps_done, weight_used_kg)
     `
     )
@@ -79,12 +79,23 @@ export default async function WorkoutHistoryPage() {
     .order("started_at", { ascending: false })
     .limit(60);
 
-  const sessions: SessionRow[] = ((raw as any[]) || []).map((s) => ({
-    ...s,
-    training_days: Array.isArray(s.training_days)
+  const sessions: SessionRow[] = ((raw as any[]) || []).map((s) => {
+    const day: any = Array.isArray(s.training_days)
       ? s.training_days[0] ?? null
-      : s.training_days,
-  }));
+      : s.training_days;
+
+    // Übersetzung des Kunden überlagern (Fallback: Deutsch).
+    if (day && locale !== "de") {
+      const tr: any = day.training_plans?.translations?.[locale];
+      const dtr = tr?.days?.[day.id];
+      if (dtr) {
+        day.title = dtr.title ?? day.title;
+        day.subtitle = dtr.subtitle ?? day.subtitle;
+      }
+    }
+
+    return { ...s, training_days: day };
+  });
 
   const completedCount = sessions.filter((s) => s.status === "completed").length;
 
