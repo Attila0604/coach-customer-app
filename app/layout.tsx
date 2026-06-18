@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Oswald, Inter } from "next/font/google";
 import "./globals.css";
+import ServiceWorkerRegister from "@/components/pwa/ServiceWorkerRegister";
 
 const oswald = Oswald({
   subsets: ["latin"],
@@ -26,8 +27,12 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
   },
   icons: {
-    icon: "/icon.svg",
-    apple: "/icon.svg",
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: "/apple-touch-icon.png",
   },
 };
 
@@ -46,6 +51,7 @@ export default function RootLayout({
   return (
     <html lang="de" className={`${oswald.variable} ${inter.variable}`}>
       <body className="bg-ink-900 text-bone font-sans antialiased">
+        <ServiceWorkerRegister />
         {children}
       </body>
     </html>
