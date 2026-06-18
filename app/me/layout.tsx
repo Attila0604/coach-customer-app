@@ -4,6 +4,7 @@
 
 import { cookies } from "next/headers";
 import MeShell from "@/components/nav/MeShell";
+import InstallPrompt from "@/components/pwa/InstallPrompt";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveLocale, type Locale } from "@/lib/i18n";
 
@@ -25,5 +26,10 @@ export default async function MeLayout({
       .maybeSingle();
     locale = resolveLocale(data?.language as string | null | undefined);
   }
-  return <MeShell locale={locale}>{children}</MeShell>;
+  return (
+    <MeShell locale={locale}>
+      {children}
+      <InstallPrompt />
+    </MeShell>
+  );
 }
